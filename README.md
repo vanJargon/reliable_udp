@@ -6,7 +6,7 @@ A project to implement a reliable and quick transport protocol (RQTP) in a local
 
 Test and Experiment
 -------------------
-Mininet is used to simulate packet loss. 
+Mininet is used to simulate our network with packet loss. 
 
 To start mininet, use
 ```terminal
