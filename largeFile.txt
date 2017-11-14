@@ -1,0 +1,414 @@
+An Overview of Cryptography
+Gary C. Kessler
+26 February 2017
+
+        © 1998-2017 — A much shorter version of this paper first appeared in Handbook on Local Area Networks (Auerbach, Sept. 1998).
+        Since that time, this paper has taken on a life of its own...
+
+CONTENTS
+
+    1. INTRODUCTION
+    2. BASIC CONCEPTS OF CRYPTOGRAPHY
+    3. TYPES OF CRYPTOGRAPHIC ALGORITHMS
+        3.1. Secret Key Cryptography
+        3.2. Public Key Cryptography
+        3.3. Hash Functions
+        3.4. Why Three Encryption Techniques?
+        3.5. The Significance of Key Length 4. TRUST MODELS
+        4.1. PGP Web of Trust
+        4.2. Kerberos
+        4.3. Public Key Certificates and Certification Authorities
+        4.4. Summary
+    5. CRYPTOGRAPHIC ALGORITHMS IN ACTION
+        5.1. Password Protection
+        5.2. Some of the Finer Details of Diffie-Hellman Key Exchange
+        5.3. Some of the Finer Details of RSA Public Key Cryptography
+        5.4. Some of the Finer Details of DES, Breaking DES, and DES Variants
+        5.5. Pretty Good Privacy (PGP)
+        5.6. IP Security (IPsec) Protocol
+        5.7. The SSL Family of Secure Transaction Protocols for the World Wide Web
+        5.8. Elliptic Curve Cryptography (ECC)
+        5.9. The Advanced Encryption Standard (AES) and Rijndael
+        5.10. Cisco's Stream Cipher
+        5.11. TrueCrypt
+        5.12. Encrypting File System (EFS)
+        5.13. Some of the Finer Details of RC4
+        5.14. Challenge-Handshake Authentication Protocol (CHAP)
+        5.15. Secure E-mail and S/MIME
+    6. CONCLUSION AND SOAP BOX
+    7. REFERENCES AND FURTHER READING
+    A. SOME MATH NOTES
+        A.1. The Exclusive-OR (XOR) Function
+        A.2. The modulo Function
+        A.3. Information Theory and Entropy
+        A.4. Cryptography in the Pre-Computer Era
+    ABOUT THE AUTHOR
+    ACKNOWLEDGEMENTS
+
+	  	
+FIGURES
+
+    Three types of cryptography: secret-key, public key, and hash function.
+    Types of stream ciphers.
+    Feistel cipher.
+    Use of the three cryptographic techniques for secure communication.
+    Kerberos architecture.
+    VeriSign Class 3 certificate.
+    Sample entries in Unix/Linux password files.
+    DES enciphering algorithm.
+    A PGP signed message.
+    A PGP encrypted message.
+    The decrypted message.
+    IPsec Authentication Header format.
+    IPsec Encapsulating Security Payload format.
+    IPsec tunnel and transport modes for AH.
+    IPsec tunnel and transport modes for ESP.
+    Keyed-hash MAC operation.
+    Browser encryption configuration screen (Firefox).
+    SSL/TLS protocol handshake.
+    Elliptic curve addition.
+    AES pseudocode.
+    TrueCrypt screen shot (Windows).
+    TrueCrypt screen shot (MacOS).
+    TrueCrypt hidden encrypted volume within an encrypted volume.
+    EFS and Windows Explorer.
+    The cipher command.
+    EFS key storage.
+    The $LOGGED_UTILITY_STREAM Attribute.
+    CHAP Handshake.
+    Signing and verifying e-mail.
+    Encrypting and decrypting e-mail.
+    E-mail message to non-4SecureMail user.
+    Sample multipart/signed message.
+    Sample S/MIME encrypted message.
+    Sample S/MIME certificate. 
+
+TABLES
+
+    Minimum Key Lengths for Symmetric Ciphers.
+    Contents of an X.509 V3 Certificate.
+    Other Crypto Algorithms and Systems of Note.
+    ECC and RSA Key Comparison. 
+
+
+    1. INTRODUCTION
+
+    Does increased security provide comfort to paranoid people? Or does security provide some very basic protections that we are naive to believe that we don't need? During this time when the Internet provides essential communication between literally billions of people and is used as a tool for commerce, social interaction, and the exchange of an increasing amount of personal information, security has become a tremendously important issue for every user to deal with.
+
+    There are many aspects to security and many applications, ranging from secure commerce and payments to private communications and protecting health care information. One essential aspect for secure communications is that of cryptography. But it is important to note that while cryptography is necessary for secure communications, it is not by itself sufficient. The reader is advised, then, that the topics covered here only describe the first of many steps necessary for better security in any number of situations.
+
+    This paper has two major purposes. The first is to define some of the terms and concepts behind basic cryptographic methods, and to offer a way to compare the myriad cryptographic schemes in use today. The second is to provide some real examples of cryptography in use today. (See Section A.4 for some additional commentary on this...)
+
+    DISCLAIMER: Several companies, products, and services are mentioned in this tutorial. Such mention is for example purposes only and, unless explicitly stated otherwise, should not be taken as a recommendation or endorsement by the author.
+
+    2. BASIC CONCEPTS OF CRYPTOGRAPHY
+
+    Cryptography is the science of secret writing is an ancient art; the first documented use of cryptography in writing dates back to circa 1900 B.C. when an Egyptian scribe used non-standard hieroglyphs in an inscription. Some experts argue that cryptography appeared spontaneously sometime after writing was invented, with applications ranging from diplomatic missives to war-time battle plans. It is no surprise, then, that new forms of cryptography came soon after the widespread development of computer communications. In data and telecommunications, cryptography is necessary when communicating over any untrusted medium, which includes just about any network, particularly the Internet.
+
+    There are five primary functions of cryptography today:
+
+        Privacy/confidentiality: Ensuring that no one can read the message except the intended receiver.
+        Authentication: The process of proving one's identity.
+        Integrity: Assuring the receiver that the received message has not been altered in any way from the original.
+        Non-repudiation: A mechanism to prove that the sender really sent this message.
+        Key exchange: The method by which crypto keys are shared between sender and receiver. 
+
+    In cryptography, we start with the unencrypted data, referred to as plaintext. Plaintext is encrypted into ciphertext, which will in turn (usually) be decrypted into usable plaintext. The encryption and decryption is based upon the type of cryptography scheme being employed and some form of key. For those who like formulas, this process is sometimes written as:
+
+    C = Ek(P)
+    P = Dk(C)
+
+          where P = plaintext, C = ciphertext, E = the encryption method, D = the decryption method, and k = the key.
+
+    In many of the descriptions below, two communicating parties will be referred to as Alice and Bob; this is the common nomenclature in the crypto field and literature to make it easier to identify the communicating parties. If there is a third and fourth party to the communication, they will be referred to as Carol and Dave, respectively. A malicious party is referred to as Mallory, an eavesdropper as Eve, and a trusted third party as Trent.
+
+        In most common usage, cryptography is most closely associated with the development and creation of the mathematical algorithms used to encrypt and decrypt messages, whereas cryptanalysis is the science of analyzing and breaking encryption schemes. Cryptology is the term referring to the broad study of secret writing, and encompasses both cryptography and cryptanalysis.
+
+
+    3. TYPES OF CRYPTOGRAPHIC ALGORITHMS
+
+    There are several ways of classifying cryptographic algorithms. For purposes of this paper, they will be categorized based on the number of keys that are employed for encryption and decryption, and further defined by their application and use. The three types of algorithms that will be discussed are (Figure 1):
+
+        Secret Key Cryptography (SKC): Uses a single key for both encryption and decryption; also called symmetric encryption. Primarily used for privacy and confidentiality.
+        Public Key Cryptography (PKC): Uses one key for encryption and another for decryption; also called asymmetric encryption. Primarily used for authentication, non-repudiation, and key exchange.
+        Hash Functions: Uses a mathematical transformation to irreversibly "encrypt" information, providing a digital fingerprint. Primarily used for message integrity.
+
+
+
+
+    FIGURE 1: Three types of cryptography: secret key, public key,
+    and hash function.
+
+
+    3.1. Secret Key Cryptography
+
+    Secret key cryptography methods employ a single key for both encryption and decryption. As shown in Figure 1A, the sender uses the key to encrypt the plaintext and sends the ciphertext to the receiver. The receiver applies the same key to decrypt the message and recover the plaintext. Because a single key is used for both functions, secret key cryptography is also called symmetric encryption.
+
+    With this form of cryptography, it is obvious that the key must be known to both the sender and the receiver; that, in fact, is the secret. The biggest difficulty with this approach, of course, is the distribution of the key (more on that later in the discussion of public key cryptography).
+
+    Secret key cryptography schemes are generally categorized as being either stream ciphers or block ciphers.
+
+
+    A) Self-synchronizing stream cipher. (From Schneier, 1996, Figure 9.8)
+
+    B) Synchronous stream cipher. (From Schneier, 1996, Figure 9.6)
+    FIGURE 2: Types of stream ciphers.
+
+    Stream ciphers operate on a single bit (byte or computer word) at a time and implement some form of feedback mechanism so that the key is constantly changing. Stream ciphers come in several flavors but two are worth mentioning here (Figure 2). Self-synchronizing stream ciphers calculate each bit in the keystream as a function of the previous n bits in the keystream. It is termed "self-synchronizing" because the decryption process can stay synchronized with the encryption process merely by knowing how far into the n-bit keystream it is. One problem is error propagation; a garbled bit in transmission will result in n garbled bits at the receiving side. Synchronous stream ciphers generate the keystream in a fashion independent of the message stream but by using the same keystream generation function at sender and receiver. While stream ciphers do not propagate transmission errors, they are, by their nature, periodic so that the keystream will eventually repeat.
+
+
+    FIGURE 3: Feistel cipher. (Source: Wikimedia Commons)
+
+    A block cipher is so-called because the scheme encrypts one block of data at a time using the same key on each block. In general, the same plaintext block will always encrypt to the same ciphertext when using the same key in a block cipher whereas the same plaintext will encrypt to different ciphertext in a stream cipher. The most common construct for block encryption algorithms is the Feistel cipher, named for cryptographer Horst Feistel (IBM). As shown in Figure 3, a Feistel cipher combines elements of substitution, permutation (transposition), and key expansion; these features create a large amount of "confusion and diffusion" (per Claude Shannon) in the cipher. One advantage of the Feistel design is that the encryption and decryption stages are similar, sometimes identical, requiring only a reversal of the key operation, thus dramatically reducing the size of the code (software) or circuitry (hardware) developed to implement the cipher. One of Feistel's early papers describing this operation is "Cryptography and Computer Privacy" (Scientific American, May 1973, 228(5), 15-23).
+
+    Block ciphers can operate in one of several modes; the following are the most important:
+
+        Electronic Codebook (ECB) mode is the simplest, most obvious application: the secret key is used to encrypt the plaintext block to form a ciphertext block. Two identical plaintext blocks, then, will always generate the same ciphertext block. ECB is susceptible to a variety of brute-force attacks (because of the fact that the same plaintext block will always encrypt to the same ciphertext), as well as deletion and insertion attacks. I addition, a single bit error in the transmission of the ciphertext results in an error in the entire block of decrypted plaintext.
+        Cipher Block Chaining (CBC) mode adds a feedback mechanism to the encryption scheme; the plaintext is exclusively-ORed (XORed) with the previous ciphertext block prior to encryption so that two identical plaintext blocks will encrypt differently. While CBC protects against many brute-force, deletion, and insertion attacks, a single bit error in the ciphertext yields an entire block error in the decrypted plaintext block and a bit error in the next decrypted plaintext block.
+        Cipher Feedback (CFB) mode is a block cipher implementation as a self-synchronizing stream cipher. CFB mode allows data to be encrypted in units smaller than the block size, which might be useful in some applications such as encrypting interactive terminal input. If we were using one-byte CFB mode, for example, each incoming character is placed into a shift register the same size as the block, encrypted, and the block transmitted. At the receiving side, the ciphertext is decrypted and the extra bits in the block (i.e., everything above and beyond the one byte) are discarded. CFB mode generates a keystream based upon the previous ciphertext (the initial key comes from an Initialization Vector [IV]). In this mode, a single bit error in the ciphertext affects both this block and the following one.
+        Output Feedback (OFB) mode is a block cipher implementation conceptually similar to a synchronous stream cipher. OFB prevents the same plaintext block from generating the same ciphertext block by using an internal feedback mechanism that generates the keystream independently of both the plaintext and ciphertext bitstreams. In OFB, a single bit error in ciphertext yields a single bit error in the decrypted plaintext.
+        Counter (CTR) mode is a relatively modern addition to block ciphers. Like CFB and OFB, CTR mode operates on the blocks as in a stream cipher; like ECB, CTR mode operates on the blocks independently. Unlike ECB, however, CTR uses different key inputs to different blocks so that two identical blocks of plaintext will not reuslt in the same ciphertext. Finally, each block of ciphertext has specific location within the encrypted message. CTR mode, then, allows blocks to be processed in parallel — thus offering performance advantages when parallel processing and multiple processors are available — but is not susceptible to ECB's brute-force, deletion, and insertion attacks.
+
+    A good overview of these different modes can be found at CRYPTO-IT.
+
+    Secret key cryptography algorithms in use today — or, at least, important today even if not in use — include:
+
+        Data Encryption Standard (DES): One of the most well-known and well-studied SKC schemes, DES was designed by IBM in the 1970s and adopted by the National Bureau of Standards (NBS) [now the National Institute for Standards and Technology (NIST)] in 1977 for commercial and unclassified government applications. DES is a Feistel block-cipher employing a 56-bit key that operates on 64-bit blocks. DES has a complex set of rules and transformations that were designed specifically to yield fast hardware implementations and slow software implementations, although this latter point is not significant today since the speed of computer processors is several orders of magnitude faster today than even twenty years ago. DES was based somewhat on an earlier cipher from Feistel called Lucifer which, some sources report, had a 112-bit key. This was rejected, partially in order to fit the algorithm onto a single chip and partially because of the National Security Agency (NSA). The NSA also proposed a number of tweaks to DES that many thought were introduced in order to weaken the cipher, but analysis in the 1990s showed that the NSA suggestions actually strengthed DES (see "The Legacy of DES" by Bruce Schneier [2004]).
+
+        DES was defined in American National Standard X3.92 and three Federal Information Processing Standards (FIPS), all withdrawn in 2005:
+            FIPS 46-3: DES (Archived file)
+            FIPS 74: Guidelines for Implementing and Using the NBS Data Encryption Standard
+            FIPS 81: DES Modes of Operation
+
+        Information about vulnerabilities of DES can be obtained from the Electronic Frontier Foundation.
+
+        Two important variants that strengthen DES are:
+
+            Triple-DES (3DES): A variant of DES that employs up to three 56-bit keys and makes three encryption/decryption passes over the block; 3DES is also described in FIPS 46-3 and is the recommended replacement to DES.
+
+            DESX: A variant devised by Ron Rivest. By combining 64 additional key bits to the plaintext prior to encryption, effectively increases the keylength to 120 bits.
+
+        More detail about DES, 3DES, and DESX can be found below in Section 5.4.
+
+        Advanced Encryption Standard (AES): In 1997, NIST initiated a very public, 4-1/2 year process to develop a new secure cryptosystem for U.S. government applications (as opposed to the very closed process in the adoption of DES 25 years earlier). The result, the Advanced Encryption Standard, became the official successor to DES in December 2001. AES uses an SKC scheme called Rijndael, a block cipher designed by Belgian cryptographers Joan Daemen and Vincent Rijmen. The algorithm can use a variable block length and key length; the latest specification allowed any combination of keys lengths of 128, 192, or 256 bits and blocks of length 128, 192, or 256 bits. NIST initially selected Rijndael in October 2000 and formal adoption as the AES standard came in December 2001. FIPS PUB 197 describes a 128-bit block cipher employing a 128-, 192-, or 256-bit key. The AES process and Rijndael algorithm are described in more detail below in Section 5.9.
+
+            As an aside, the AES selection process managed by NIST was very public. A similar project, the New European Schemes for Signatures, Integrity and Encryption (NESSIE), was designed as an independent project meant to augment the work of NIST by putting out an open call for new cryptographic primitives. NESSIE ran from about 2000-2003. While several new algorithms were found during the NESSIE process, no new stream cipher survived cryptanalysis. As a result, the ECRYPT Stream Cipher Project (eSTREAM) was created, which has approved a number of new stream ciphers for both software and hardware implementation.
+
+            Similar — but different — is the Japanese Government Cryptography Research and Evaluation Committees (CRYPTREC) efforts to evaluate algorithms submitted for government and industry applications. They, too, have approved a number of cipher suites for various applications.
+
+        CAST-128/256: CAST-128, described in Request for Comments (RFC) 2144, is a DES-like substitution-permutation crypto algorithm, employing a 128-bit key operating on a 64-bit block. CAST-256 (RFC 2612) is an extension of CAST-128, using a 128-bit block size and a variable length (128, 160, 192, 224, or 256 bit) key. CAST is named for its developers, Carlisle Adams and Stafford Tavares, and is available internationally. CAST-256 was one of the Round 1 algorithms in the AES process.
+
+        International Data Encryption Algorithm (IDEA): Secret-key cryptosystem written by Xuejia Lai and James Massey, in 1992 and patented by Ascom; a 64-bit SKC block cipher using a 128-bit key. Also available internationally.
+
+        Rivest Ciphers (aka Ron's Code): Named for Ron Rivest, a series of SKC algorithms.
+
+            RC1: Designed on paper but never implemented.
+
+            RC2: A 64-bit block cipher using variable-sized keys designed to replace DES. It's code has not been made public although many companies have licensed RC2 for use in their products. Described in RFC 2268.
+
+            RC3: Found to be breakable during development.
+
+            RC4: A stream cipher using variable-sized keys; it is widely used in commercial cryptography products. An update to RC4, called Spritz (see also), was designed by Rivest and Jacob Schuldt. More detail about RC4 (and a little about Spritz) can be found below in Section 5.13.
+
+            RC5: A block-cipher supporting a variety of block sizes (32, 64, or 128 bits), key sizes, and number of encryption passes over the data. Described in RFC 2040.
+
+            RC6: A 128-bit block cipher based upon, and an improvement over, RC5; RC6 was one of the AES Round 2 algorithms.
+
+        Blowfish: A symmetric 64-bit block cipher invented by Bruce Schneier; optimized for 32-bit processors with large data caches, it is significantly faster than DES on a Pentium/PowerPC-class machine. Key lengths can vary from 32 to 448 bits in length. Blowfish, available freely and intended as a substitute for DES or IDEA, is in use in a large number of products.
+
+        Twofish: A 128-bit block cipher using 128-, 192-, or 256-bit keys. Designed to be highly secure and highly flexible, well-suited for large microprocessors, 8-bit smart card microprocessors, and dedicated hardware. Designed by a team led by Bruce Schneier and was one of the Round 2 algorithms in the AES process.
+
+        Camellia: A secret-key, block-cipher crypto algorithm developed jointly by Nippon Telegraph and Telephone (NTT) Corp. and Mitsubishi Electric Corporation (MEC) in 2000. Camellia has some characteristics in common with AES: a 128-bit block size, support for 128-, 192-, and 256-bit key lengths, and suitability for both software and hardware implementations on common 32-bit processors as well as 8-bit processors (e.g., smart cards, cryptographic hardware, and embedded systems). Also described in RFC 3713. Camellia's application in IPsec is described in RFC 4312 and application in OpenPGP in RFC 5581.
+
+        MISTY1: Developed at Mitsubishi Electric Corp., a block cipher using a 128-bit key and 64-bit blocks, and a variable number of rounds. Designed for hardware and software implementations, and is resistant to differential and linear cryptanalysis. Described in RFC 2994.
+
+        Secure and Fast Encryption Routine (SAFER): A series of block ciphers designed by James Massey for implementation in software and employing a 64-bit block. SAFER K-64, published in 1993, used a 64-bit key and SAFER K-128, published in 1994, employed a 128-bit key. After weaknesses were found, new versions were released called SAFER SK-40, SK-64, and SK-128, using 40-, 64-, and 128-bit keys, respectively. SAFER+ (1998) used a 128-bit block and was an unsuccessful candidate for the AES project; SAFER++ (2000) was submitted to the NESSIE project.
+
+        KASUMI: A block cipher using a 128-bit key that is part of the Third-Generation Partnership Project (3gpp), formerly known as the Universal Mobile Telecommunications System (UMTS). KASUMI is the intended confidentiality and integrity algorithm for both message content and signaling data for emerging mobile communications systems.
+
+        SEED: A block cipher using 128-bit blocks and 128-bit keys. Developed by the Korea Information Security Agency (KISA) and adopted as a national standard encryption algorithm in South Korea. Also described in RFC 4269.
+
+        ARIA: A 128-bit block cipher employing 128-, 192-, and 256-bit keys. Developed by large group of researchers from academic institutions, research institutes, and federal agencies in South Korea in 2003, and subsequently named a national standard. Described in RFC 5794.
+
+        CLEFIA: Described in RFC 6114, CLEFIA is a 128-bit block cipher employing key lengths of 128, 192, and 256 bits (which is compatible with AES). The CLEFIA algorithm was first published in 2007 by Sony Corporation. CLEFIA is one of the new-generation lightweight blockcipher algorithms designed after AES, offering high performance in software and hardware as well as a lightweight implementation in hardware.
+
+        SMS4: SMS4 is a 128-bit block cipher using 128-bit keys and 32 rounds to process a block. Declassified in 2006, SMS4 is used in the Chinese National Standard for Wireless Local Area Network (LAN) Authentication and Privacy Infrastructure (WAPI). SMS4 had been a proposed cipher for the Institute of Electrical and Electronics Engineers (IEEE) 802.11i standard on security mechanisms for wireless LANs, but has yet to be accepted by the IEEE or International Organization for Standardization (ISO). SMS4 is described in SMS4 Encryption Algorithm for Wireless Networks (translated and typeset by Whitfield Diffie and George Ledin, 2008) or in the original Chinese.
+
+        Skipjack: SKC scheme proposed, along with the Clipper chip, as part of the never-implemented Capstone project. Although the details of the algorithm were never made public, Skipjack was a block cipher using an 80-bit key and 32 iteration cycles per 64-bit block. Capstone, proposed by NIST and the NSA as a standard for public and government use, met with great resistance by the crypto community laregly because the design of Skipjack was classified (coupled with the key escrow requirement of the Clipper chip).
+
+        Tiny Encryption Algorithm (TEA): A family of block ciphers developed by Roger Needham and David Wheeler. TEA was originally developed in 1994, and employed a 128-bit key, 64-bit block, and 64 rounds of operation. To correct certain weaknesses in TEA, eXtended TEA (XTEA), aka Block TEA, was released in 1997. To correct weaknesses in XTEA and add versatility, Corrected Block TEA (XXTEA) was published in 1998. XXTEA also uses a 128-bit key, but block size can be any multiple of 32-bit words (with a minimum block size of 64 bits, or two words) and the number of rounds is a function of the block size (~52+6*words).
+
+        GSM (Global System for Mobile Communications, originally Groupe Spécial Mobile) encryption: GSM mobile phone systems use several stream ciphers for over-the-air communication privacy. A5/1 was developed in 1987 for use in Europe and the U.S. A5/2, developed in 1989, is a weaker algorithm and intended for use outside of Europe and the U.S. Significant flaws were found in both ciphers after the "secret" specifications were leaked in 1994, however, and A5/2 has been withdrawn from use. The newest version, A5/3, employs the KASUMI block cipher. NOTE: Unfortunately, although A5/1 has been repeatedly "broken" (e.g., see "Secret code protecting cellphone calls set loose" [2009] and "Cellphone snooping now easier and cheaper than ever" [2011]), this encryption scheme remains in widespread use, even in 3G and 4G mobile phone networks. Use of this scheme is reportedly one of the reasons that the National Security Agency (NSA) can easily decode voice and data calls over mobile phone networks.
+
+        GPRS (General Packet Radio Service) encryption: GSM mobile phone systems use GPRS for data applications, and GPRS uses a number of encryption methods, offering different levels of data protection. GEA/0 offers no encryption at all. GEA/1 and GEA/2 are proprietary stream ciphers, employing a 64-bit key and a 96-bit or 128-bit state, respectively. GEA/1 and GEA/2 are most widely used by network service providers today although both have been reportedly broken. GEA/3 is a 128-bit block cipher employing a 64-bit key that is used by some carriers; GEA/4 is a 128-bit clock cipher with a 128-bit key, but is not yet deployed.
+
+        KCipher-2: Described in RFC 7008, KCipher-2 is a stream cipher with a 128-bit key and a 128-bit initialization vector. Using simple arithmetic operations, the algorithms offers fast encryption and decryption by use of efficient implementations. KCipher-2 has been used for industrial applications, especially for mobile health monitoring and diagnostic services in Japan.
+
+        Salsa and ChaCha: Salsa20 is a stream cipher proposed for the eSTREAM project by Daniel Bernstein. Salsa20 uses a pseudorandom function based on 32-bit (whole word) addition, bitwise addition (XOR), and rotation operations, aka add-rotate-xor (ARX) operations. Salsa20 uses a 256-bit key although a 128-bit key variant also exists. In 2008, Bernstein published ChaCha, a new family of ciphers related to Salsa20. ChaCha20, defined in RFC 7539, is employed (with the Poly1305 authenticator) in Internet Engineering Task Force (IETF) protocols, most notably for IPsec and Internet Key Exchange (IKE), per RFC 7634, and Transaction Layer Security (TLS), per RFC 7905. In 2014, Google adopted ChaCha20/Poly1305 for use in OpenSSL, and they are also a part of OpenSSH.
+
+    There are several other references that describe interesting algorithms and even SKC codes dating back decades. Two that leap to mind are the Crypto Museum's Crypto List and John J.G. Savard's (albeit old) A Cryptographic Compendium page.
+    3.2. Public Key Cryptography
+
+    Public key cryptography has been said to be the most significant new development in cryptography in the last 300-400 years. Modern PKC was first described publicly by Stanford University professor Martin Hellman and graduate student Whitfield Diffie in 1976. Their paper described a two-key crypto system in which two parties could engage in a secure communication over a non-secure communications channel without having to share a secret key.
+
+    PKC depends upon the existence of so-called one-way functions, or mathematical functions that are easy to compute whereas their inverse function is relatively difficult to compute. Let me give you two simple examples:
+
+        Multiplication vs. factorization: Suppose you have two prime numbers, 3 and 7, and you need to calculate the product; it should take almost no time to calculate that value, which is 21. Now suppose, instead, that you have a number that is a product of two primes, 21, and you need to determine those prime factors. You will eventually come up with the solution but whereas calculating the product took milliseconds, factoring will take longer. The problem becomes much harder if we start with primes that have, say, 400 digits or so, because the product will have ~800 digits.
+        Exponentiation vs. logarithms: Suppose you take the number 3 to the 6th power; again, it is relatively easy to calculate 36 = 729. But if you start with the number 729 and need to determine the two integers, x and y so that logx 729 = y, it will take longer to find the two values.
+
+    While the examples above are trivial, they do represent two of the functional pairs that are used with PKC; namely, the ease of multiplication and exponentiation versus the relative difficulty of factoring and calculating logarithms, respectively. The mathematical "trick" in PKC is to find a trap door in the one-way function so that the inverse calculation becomes easy given knowledge of some item of information.
+
+    Generic PKC employs two keys that are mathematically related although knowledge of one key does not allow someone to easily determine the other key. One key is used to encrypt the plaintext and the other key is used to decrypt the ciphertext. The important point here is that it does not matter which key is applied first, but that both keys are required for the process to work (Figure 1B). Because a pair of keys are required, this approach is also called asymmetric cryptography.
+
+    In PKC, one of the keys is designated the public key and may be advertised as widely as the owner wants. The other key is designated the private key and is never revealed to another party. It is straight forward to send messages under this scheme. Suppose Alice wants to send Bob a message. Alice encrypts some information using Bob's public key; Bob decrypts the ciphertext using his private key. This method could be also used to prove who sent a message; Alice, for example, could encrypt some plaintext with her private key; when Bob decrypts using Alice's public key, he knows that Alice sent the message (authentication) and Alice cannot deny having sent the message (non-repudiation).
+
+    Public key cryptography algorithms that are in use today for key exchange or digital signatures include:
+
+        RSA: The first, and still most common, PKC implementation, named for the three MIT mathematicians who developed it — Ronald Rivest, Adi Shamir, and Leonard Adleman. RSA today is used in hundreds of software products and can be used for key exchange, digital signatures, or encryption of small blocks of data. RSA uses a variable size encryption block and a variable size key. The key-pair is derived from a very large number, n, that is the product of two prime numbers chosen according to special rules; these primes may be 100 or more digits in length each, yielding an n with roughly twice as many digits as the prime factors. The public key information includes n and a derivative of one of the factors of n; an attacker cannot determine the prime factors of n (and, therefore, the private key) from this information alone and that is what makes the RSA algorithm so secure. (Some descriptions of PKC erroneously state that RSA's safety is due to the difficulty in factoring large prime numbers. In fact, large prime numbers, like small prime numbers, only have two factors!) The ability for computers to factor large numbers, and therefore attack schemes such as RSA, is rapidly improving and systems today can find the prime factors of numbers with more than 200 digits. Nevertheless, if a large number is created from two prime factors that are roughly the same size, there is no known factorization algorithm that will solve the problem in a reasonable amount of time; a 2005 test to factor a 200-digit number took 1.5 years and over 50 years of compute time (see the Wikipedia article on integer factorization.) Regardless, one presumed protection of RSA is that users can easily increase the key size to always stay ahead of the computer processing curve. As an aside, the patent for RSA expired in September 2000 which does not appear to have affected RSA's popularity one way or the other. A detailed example of RSA is presented below in Section 5.3.
+
+        Diffie-Hellman: After the RSA algorithm was published, Diffie and Hellman came up with their own algorithm. D-H is used for secret-key key exchange only, and not for authentication or digital signatures. More detail about Diffie-Hellman can be found below in Section 5.2.
+
+        Digital Signature Algorithm (DSA): The algorithm specified in NIST's Digital Signature Standard (DSS), provides digital signature capability for the authentication of messages. Described in FIPS 186-4.
+
+        ElGamal: Designed by Taher Elgamal, a PKC system similar to Diffie-Hellman and used for key exchange.
+
+        Elliptic Curve Cryptography (ECC): A PKC algorithm based upon elliptic curves. ECC can offer levels of security with small keys comparable to RSA and other PKC methods. It was designed for devices with limited compute power and/or memory, such as smartcards and PDAs. More detail about ECC can be found below in Section 5.8. Other references include the Elliptic Curve Cryptography page and the Online ECC Tutorial page, both from Certicom. See also RFC 6090 for a review of fundamental ECC algorithms and The Elliptic Curve Digital Signature Algorithm (ECDSA) for details about the use of ECC for digital signatures.
+
+        Public Key Cryptography Standards (PKCS): A set of interoperable standards and guidelines for public key cryptography, designed by RSA Data Security Inc.
+            PKCS #1: RSA Cryptography Standard (Also RFC 8017)
+            PKCS #2: Incorporated into PKCS #1.
+            PKCS #3: Diffie-Hellman Key-Agreement Standard
+            PKCS #4: Incorporated into PKCS #1.
+            PKCS #5: Password-Based Cryptography Standard (PKCS #5 V2.1 is also RFC 8018)
+            PKCS #6: Extended-Certificate Syntax Standard (being phased out in favor of X.509v3)
+            PKCS #7: Cryptographic Message Syntax Standard (Also RFC 2315)
+            PKCS #8: Private-Key Information Syntax Standard (Also RFC 5208)
+            PKCS #9: Selected Attribute Types (Also RFC 2985)
+            PKCS #10: Certification Request Syntax Standard (Also RFC 2986)
+            PKCS #11: Cryptographic Token Interface Standard
+            PKCS #12: Personal Information Exchange Syntax Standard (Also RFC 7292)
+            PKCS #13: Elliptic Curve Cryptography Standard
+            PKCS #14: Pseudorandom Number Generation Standard is no longer available
+            PKCS #15: Cryptographic Token Information Format Standard
+
+        Cramer-Shoup: A public key cryptosystem proposed by R. Cramer and V. Shoup of IBM in 1998.
+
+        Key Exchange Algorithm (KEA): A variation on Diffie-Hellman; proposed as the key exchange method for the NIST/NSA Capstone project.
+
+        LUC: A public key cryptosystem designed by P.J. Smith and based on Lucas sequences. Can be used for encryption and signatures, using integer factoring.
+
+        McEliece: A public key cryptosystem based on algebraic coding theory.
+
+    For additional information on PKC algorithms, see "Public Key Encryption" (Chapter 8) in Handbook of Applied Cryptography, by A. Menezes, P. van Oorschot, and S. Vanstone (CRC Press, 1996).
+
+        A digression: Who invented PKC? I tried to be careful in the first paragraph of this section to state that Diffie and Hellman "first described publicly" a PKC scheme. Although I have categorized PKC as a two-key system, that has been merely for convenience; the real criteria for a PKC scheme is that it allows two parties to exchange a secret even though the communication with the shared secret might be overheard. There seems to be no question that Diffie and Hellman were first to publish; their method is described in the classic paper, "New Directions in Cryptography," published in the November 1976 issue of IEEE Transactions on Information Theory (IT-22(6), 644-654). As shown in Section 5.2, Diffie-Hellman uses the idea that finding logarithms is relatively harder than performing exponentiation. And, indeed, it is the precursor to modern PKC which does employ two keys. Rivest, Shamir, and Adleman described an implementation that extended this idea in their paper, "A Method for Obtaining Digital Signatures and Public Key Cryptosystems," published in the February 1978 issue of the Communications of the ACM (CACM) (2192), 120-126). Their method, of course, is based upon the relative ease of finding the product of two large prime numbers compared to finding the prime factors of a large number.
+
+        Some sources, though, credit Ralph Merkle with first describing a system that allows two parties to share a secret although it was not a two-key system, per se. A Merkle Puzzle works where Alice creates a large number of encrypted keys, sends them all to Bob so that Bob chooses one at random and then lets Alice know which he has selected. An eavesdropper (Eve) will see all of the keys but can't learn which key Bob has selected (because he has encrypted the response with the chosen key). In this case, Eve's effort to break in is the square of the effort of Bob to choose a key. While this difference may be small it is often sufficient. Merkle apparently took a computer science course at UC Berkeley in 1974 and described his method, but had difficulty making people understand it; frustrated, he dropped the course. Meanwhile, he submitted the paper "Secure Communication Over Insecure Channels," which was published in the CACM in April 1978; Rivest et al.'s paper even makes reference to it. Merkle's method certainly wasn't published first, but did he have the idea first?
+
+        An interesting question, maybe, but who really knows? For some time, it was a quiet secret that a team at the UK's Government Communications Headquarters (GCHQ) had first developed PKC in the early 1970s. Because of the nature of the work, GCHQ kept the original memos classified. In 1997, however, the GCHQ changed their posture when they realized that there was nothing to gain by continued silence. Documents show that a GCHQ mathematician named James Ellis started research into the key distribution problem in 1969 and that by 1975, James Ellis, Clifford Cocks, and Malcolm Williamson had worked out all of the fundamental details of PKC, yet couldn't talk about their work. (They were, of course, barred from challenging the RSA patent!) By 1999, Ellis, Cocks, and Williamson began to get their due credit in a break-through article in WIRED Magazine.
+
+        And the National Security Agency (NSA) claims to have knowledge of this type of algorithm as early as 1966 but there is no supporting documentation... yet. So this really was a digression...
+
+    3.3. Hash Functions
+
+    Hash functions, also called message digests and one-way encryption, are algorithms that, in essence, use no key (Figure 1C). Instead, a fixed-length hash value is computed based upon the plaintext that makes it impossible for either the contents or length of the plaintext to be recovered. Hash algorithms are typically used to provide a digital fingerprint of a file's contents, often used to ensure that the file has not been altered by an intruder or virus. Hash functions are also commonly employed by many operating systems to encrypt passwords. Hash functions, then, provide a measure of the integrity of a file.
+
+        Let me reiterate that hashes are one-way encryption. You cannot take a hash and "decrypt" it to find the original string that created it, despite the many web sites that claim or suggest otherwise, such as CrackStation, HashKiller.co.uk, MD5 Online, md5cracker, OnlineHashCrack, and RainbowCrack.
+
+        Note that these sites search databases and/or use rainbow tables to find a suitable string that produces the hash in question but one can't definitively guarantee what string originally produced the hash. This is an important distinction. Suppose that you want to crack someone's password, where the hash of the password is stored on the server. Indeed, all you then need is a string that produces the correct hash and you're in! However, you cannot prove that you have discovered the user's password, only a "duplicate key."
+
+    Hash algorithms that are in common use today include:
+
+        Message Digest (MD) algorithms: A series of byte-oriented algorithms that produce a 128-bit hash value from an arbitrary-length message.
+
+            MD2 (RFC 1319): Designed for systems with limited memory, such as smart cards. (MD2 has been relegated to historical status, per RFC 6149.)
+
+            MD4 (RFC 1320): Developed by Rivest, similar to MD2 but designed specifically for fast processing in software. (MD4 has been relegated to historical status, per RFC 6150.)
+
+            MD5 (RFC 1321): Also developed by Rivest after potential weaknesses were reported in MD4; this scheme is similar to MD4 but is slower because more manipulation is made to the original data. MD5 has been implemented in a large number of products although several weaknesses in the algorithm were demonstrated by German cryptographer Hans Dobbertin in 1996 ("Cryptanalysis of MD5 Compress").
+
+        Secure Hash Algorithm (SHA): Algorithm for NIST's Secure Hash Standard (SHS), described in FIPS 180-4.
+
+            SHA-1 produces a 160-bit hash value and was originally published as FIPS PUB 180-1 and RFC 3174. It was deprecated by NIST as of the end of 2013 although it is still widely used.
+
+            SHA-2, originally described in FIPS PUB 180-2 and eventually replaced by FIPS PUB 180-3 (and FIPS PUB 180-4), comprises five algorithms in the SHS: SHA-1 plus SHA-224, SHA-256, SHA-384, and SHA-512 which can produce hash values that are 224, 256, 384, or 512 bits in length, respectively. SHA-2 recommends use of SHA-1, SHA-224, and SHA-256 for messages less than 264 bits in length, and employs a 512 bit block size; SHA-384 and SHA-512 are recommended for messages less than 2128 bits in length, and employs a 1,024 bit block size. FIPS PUB 180-4 also introduces the concept of a truncated hash in SHA-512/t, a generic name referring to a hash value based upon the SHA-512 algorithm that has been truncated to t bits; SHA-512/224 and SHA-512/256 are specifically described. SHA-224, -256, -384, and -512 are also described in RFC 4634.
+
+            SHA-3 is the current SHS algorithm. Although there had not been any successful attacks on SHA-2, NIST decided that having an alternative to SHA-2 using a different algorithm would be prudent. In 2007, they launched a SHA-3 Competition to find that alternative; a list of submissions can be found at The SHA-3 Zoo. In 2012, NIST announced that after reviewing 64 submissions, the winner was Keccak (pronounced "catch-ack"), a family of hash algorithms based upon sponge functions. The NIST version can support hash output sizes of 256 and 512 bits.
+
+        RIPEMD: A series of message digests that initially came from the RIPE (RACE Integrity Primitives Evaluation) project. RIPEMD-160 was designed by Hans Dobbertin, Antoon Bosselaers, and Bart Preneel, and optimized for 32-bit processors to replace the then-current 128-bit hash functions. Other versions include RIPEMD-256, RIPEMD-320, and RIPEMD-128.
+
+        HAVAL (HAsh of VAriable Length): Designed by Y. Zheng, J. Pieprzyk and J. Seberry, a hash algorithm with many levels of security. HAVAL can create hash values that are 128, 160, 192, 224, or 256 bits in length. More details can be found in a AUSCRYPT '92 paper.
+
+        Whirlpool: Designed by V. Rijmen (co-inventor of Rijndael) and P.S.L.M. Barreto, Whirlpool is one of two hash functions endorsed by the New European Schemes for Signatures, Integrity, and Encryption (NESSIE) competition (the other being SHA). Whirlpool operates on messages less than 2256 bits in length and produces a message digest of 512 bits. The design of this hash function is very different than that of MD5 and SHA-1, making it immune to the same attacks as on those hashes.
+
+        Tiger: Designed by Ross Anderson and Eli Biham, Tiger is designed to be secure, run efficiently on 64-bit processors, and easily replace MD4, MD5, SHA and SHA-1 in other applications. Tiger/192 produces a 192-bit output and is compatible with 64-bit architectures; Tiger/128 and Tiger/160 produce a hash of length 128 and 160 bits, respectively, to provide compatibility with the other hash functions mentioned above.
+
+        eD2k: Named for the EDonkey2000 Network (eD2K), the eD2k hash is a root hash of an MD4 hash list of a given file. A root hash is used on peer-to-peer file transfer networks, where a file is broken into chunks; each chunk has its own MD4 hash associated with it and the server maintains a file that contains the hash list of all of the chunks. The root hash is the hash of the hash list file.
+
+    Readers might be interested in HashCalc, a Windows-based program that calculates hash values using a dozen algorithms, including MD5, SHA-1 and several variants, RIPEMD-160, and Tiger. Command line utilities that calculate hash values include sha_verify by Dan Mares (Windows; supports MD5, SHA-1, SHA-2) and md5deep (cross-platform; supports MD5, SHA-1, SHA-256, Tiger, and Whirlpool).
+
+    Hash functions are sometimes misunderstood and some sources claim that no two files can have the same hash value. This is, in theory if not in fact, incorrect. Consider a hash function that provides a 128-bit hash value. There are, then, 2128 possible hash values. But there are an infinite number of possible files and ∞ >> 2128. Therefore, there have to be multiple files — in fact, there have to be an infinite number of files! — that have the same 128-bit hash value.
+
+        While what I write above is theoretically correct, it is not true in practice because hash algorithms are designed to work with a limited message size, as mentioned above. For example, SHA-1, SHA-224, and SHA-256 produce hash values that are 160, 224, and 256 bits in length, respectively, and limit the message length to less than 264 bits; SHA-384 and all SHA-256 variants limit the message length to less than 2128 bits.
+
+    The difficulty is not necessarily in finding two files with the same hash, but in finding a second file that has the same hash value as a given first file. Consider this example. A human head has, generally, no more than ~150,000 hairs. Since there are more than 7 billion people on earth, we know that there are a lot of people with the same number of hairs on their heads. Finding two people with the same number of hairs, then, would be relatively simple. The harder problem is choosing one person (say, you, the reader) and then finding another person who has the same number of hairs on their head as you have on yours.
+
+    This is somewhat similar to the Birthday Problem. We know from probability that if you choose a random group of ~23 people, the probability is about 50% that two will share a birthday (the probability goes up to 99.9% with a group of 70 people). However, if you randomly select one person in a group of 23 and try to find a match to that person, the probability is only about 6% of finding a match; you'd need a group of 253 for a 50% probability of a shared birthday to one of the people chosen at random (and a group of more than 4,000 to obtain a 99.9% probability).
+
+    What is hard to do, then, is to try to create a file that matches a given hash value so as to force a hash value collision — which is the reason that hash functions are used extensively for information security and computer forensics applications. Alas, researchers in 2004 found that practical collision attacks could be launched on MD5, SHA-1, and other hash algorithms. Readers interested in this problem should read the following:
+
+        AccessData. (2006, April). MD5 Collisions: The Effect on Computer Forensics. AccessData White Paper.
+        Burr, W. (2006, March/April). Cryptographic hash standards: Where do we go from here? IEEE Security & Privacy, 4(2), 88-91.
+        Dwyer, D. (2009, June 3). SHA-1 Collision Attacks Now 252. SecureWorks Research blog.
+        Gutman, P., Naccache, D., & Palmer, C.C. (2005, May/June). When hashes collide. IEEE Security & Privacy, 3(3), 68-71.
+        Klima, V. (March 2005). Finding MD5 Collisions - a Toy For a Notebook.
+        Lee, R. (2009, January 7). Law Is Not A Science: Admissibility of Computer Evidence and MD5 Hashes. SANS Computer Forensics blog.
+        Stevens, M., Bursztein, E., Karpman, P., Albertini, A., & Markov, Y. (2017). The first collision for full SHA-1.
+        Stevens, M., Karpman, P., & Peyrin, T. (2015, October 8). Freestart collision on full SHA-1. Cryptology ePrint Archive, Report 2015/967.
+        Thompson, E. (2005, February). MD5 collisions and the impact on computer forensics. Digital Investigation, 2(1), 36-40.
+        Wang, X., Feng, D., Lai, X., & Yu, H. (2004, August). Collisions for Hash Functions MD4, MD5, HAVAL-128 and RIPEMD.
+        Wang, X., Yin, Y.L., & Yu, H. (2005, February 13). Collision Search Attacks on SHA1.
+
+    Readers are also referred to the Eindhoven University of Technology HashClash Project Web site. for For dditional information on hash functions, see David Hopwood's MessageDigest Algorithms page and Peter Selinger's MD5 Collision Demo page. For historical purposes, take a look at the situation with hash collisions, circa 2005, in RFC 4270.
+
+    In October 2015, the SHA-1 Freestart Collision was announced; see a report by Bruce Schneier and the developers of the attack (as well as the paper above by Stevens, Karpman, and Peyrin (2015)). In February 2017, the first SHA-1 collision was announced on the Google Security Blog and Centrum Wiskunde & Informatica's Shattered page. See also the paper by Stevens et al. (2017), listed above.
+
+    For an interesting twist on this discussion, read about the Nostradamus attack reported at Predicting the winner of the 2008 US Presidential Elections using a Sony PlayStation 3 (by M. Stevens, A.K. Lenstra, and B. de Weger, November 2007).
+
+    Finally, note that certain extensions of hash functions are used for a variety of information security and digital forensics applications, such as:
+
+        Hash libraries, aka hashsets, are sets of hash values corresponding to known files. A hashset containing the hash values of all files known to be a part of a given operating system, for example, could form a set of known good files, and could be ignored in an investigation for malware or other suspicious file, whereas as hash library of known child pornographic images could form a set of known bad files and be the target of such an investigation.
+        Rolling hashes refer to a set of hash values that are computed based upon a fixed-length "sliding window" through the input. As an example, a hash value might be computed on bytes 1-10 of a file, then on bytes 2-11, 3-12, 4-13, etc.
+        Fuzzy hashes are an area of intense research and represent hash values that represent two inputs that are similar. Fuzzy hashes are used to detect documents, images, or other files that are close to each other with respect to content. See "Fuzzy Hashing" (PDF) by Jesse Kornblum for a good treatment of this topic.
+
+    3.4. Why Three Encryption Techniques?
+
+    So, why are there so many different types of cryptographic schemes? Why can't we do everything we need with just one?
+
+    The answer is that each scheme is optimized for some specific cryptographic application(s). Hash functions, for example, are well-suited for ensuring data integrity because any change made to the contents of a message will result in the receiver calculating a different hash value than the one placed in the transmission by the sender. Since it is highly unlikely that two different messages will yield the same hash value, data integrity is ensured to a high degree of confidence.
+
+    Secret key cryptography, on the other hand, is ideally suited to encrypting messages, thus providing privacy and confidentiality. The sender can generate a session key on a per-message basis to encrypt the message; the receiver, of course, needs the same session key in order to decrypt the message.
+
+    Key exchange, of course, is a key application of public key cryptography (no pun intended). Asymmetric schemes can also be used for non-repudiation and user authentication; if the receiver can obtain the session key encrypted with the sender's private key, then only this sender could have sent the message. Public key cryptography could, theoretically, also be used to encrypt messages although this is rarely done because secret key cryptography values can generally be computed about 1000 times faster than public key cryptography values.
+
+
+    FIGURE 4: Use of the three cryptographic techniques for secure communication.
+
+    Figure 4 puts all of this together and shows how a hybrid cryptographic scheme combines all of these functions to form a secure transmission comprising a digital signature and digital envelope. In this example, the sender of the message is Alice and the receiver is Bob.
+
+    A digital envelope comprises an encrypted message and an encrypted session key. Alice uses secret key cryptography to encrypt her message using the session key, which she generates at random with each session. Alice then encrypts the session key using Bob's public key. The encrypted message and encrypted session key together form the digital envelope. Upon receipt, Bob recovers the session secret key using his private key and then decrypts the encrypted message.
+
+    The digital signature is formed in two steps. First, Alice computes the hash value of her message; next, she encrypts the hash value with her private key. Upon receipt of the digital signature, Bob recovers the hash value calculated by Alice by decrypting the digital signature with Alice's public key. Bob can then apply the hash function to Alice's original message, which he has already decrypted (see previous paragraph). If the resultant hash value is not the same as the value supplied by Alice, then Bob knows that the message has been altered; if the hash values are the same, Bob should believe that the message he received is identical to the one that Alice sent.
+
+    This scheme also provides nonrepudiation since it proves that Alice sent the message; if the hash value recovered by Bob using Alice's public key proves that the message has not been altered, then only Alice could have created the digital signature. Bob also has proof that he is the intended receiver; if he can correctly decrypt the message, then he must have correctly decrypted the session key meaning that his is the correct private key.
+
+    This diagram purposely suggests a cryptosystem where the session key is used for just a single session. Even if this session key is somehow broken, only this session will be compromised; the session key for the next session is not based upon the key for this session, just as this session's key was not dependent on the key from the previous session. This is known as Perfect Forward Secrecy; you might lose one session key due to a compromise but you won't lose all of them. (This was an issue in the 2014 OpenSSL vulnerability known as Heartbleed.)
+    3.5. The Significance of Key Length
+
+    In a 1998 article in the industry literature, a writer made the claim that 56-bit keys did not provide as adequate protection for DES at that time as they did in 1975 because computers were 1000 times faster in 1998 than in 1975. Therefore, the writer went on, we needed 56,000-bit keys in 1998 instead of 56-bit keys to provide adequate protection. The conclusion was then drawn that because 56,000-bit keys are infeasible (true), we should accept the fact that we have to live with weak cryptography (false!). The major error here is that the writer did not take into account that the number of possible key values double whenever a single bit is added to the key length; thus, a 57-bit key has twice as many values as a 56-bit key (because 257 is two times 256). In fact, a 66-bit key would have 1024 times more values than a 56-bit key.
+
+    But this does bring up the question, "What is the significance of key length as it affects the level of protection?"
+
+    In cryptography, size does matter. The larger the key, the harder it is to crack a block of encrypted data. The reason that large keys offer more protection is almost obvious; computers have made it easier to attack ciphertext by using brute force methods rather than by attacking the mathematics (which are generally well-known anyway). With a brute force attack, the attacker merely generates every possible key and applies it to the ciphertext. Any resulting plaintext that makes sense offers a candidate for a legitimate key. This was the basis, of course, of the EFF's attack on DES.
+
+    Until the mid-1990s or so, brute force attacks were beyond the capabilities of computers that were within the budget of the attacker community. By that time, however, significant compute power was typically available and accessible. General-purpose computers such as PCs were already being used for brute force attacks. For serious attackers with money to spend, such as some large companies or governments, Field Programmable Gate Array (FPGA) or Application-Specific Integrated Circuits (ASIC) technology offered the ability to build specialized chips that could provide even faster and cheaper solutions than a PC. As an example, the AT&T Optimized Reconfigurable Cell Array (ORCA) FPGA chip cost about $200 and could test 30 million DES keys per second, while a $10 ASIC chip could test 200 million DES keys per second; compare that to a PC which might be able to test 40,000 keys per second. Distributed attacks, harnessing the power of up to tens of thousands of powerful CPUs, are now commonly employed to try to brute-force crypto keys.
