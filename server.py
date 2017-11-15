@@ -20,6 +20,7 @@ Additional cmd line option --verbose added to make server noisy
 import socket
 from struct import *
 import argparse
+from sortedcontainers import SortedList
 
 def run_server(verbose, savefile, output_file):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)#socket.SOCK_RAW, socket.IPPROTO_IP)#
@@ -31,6 +32,7 @@ def run_server(verbose, savefile, output_file):
         print("Server started. Listening on %s at port %d" % (server_address, server_port))
     talkedTo = {}
     s = bytearray()
+    segIdTracker = SortedList([0])
     p_counter = 0
     
     while True:
@@ -38,38 +40,52 @@ def run_server(verbose, savefile, output_file):
         data, client_addr = recv
         client_ip = client_addr[0]
         msg_length = len(data) - 9
-        flags, tr_id, nextSegId, msg = unpack('!BII' + str(msg_length) + 's', data)
+        flags, tr_id, segId, msg = unpack('!BII' + str(msg_length) + 's', data)
         
-        if int(nextSegId) == 0:
+        f_newTransaction = flags & 2**0
+        if f_newTransaction:
             print('new filestream started')
+            s = bytearray()
+            segIdTracker = SortedList([0])
         
         # store data into s TODO: make it such that data stored is unique to transaction_id, source_ip and source_port
-        s[nextSegId:msg_length] = msg
+        s[segId:msg_length] = msg
+        if segId in segIdTracker or segId+msg_length > segIdTracker[0]:
+            segIdTracker.remove(segId)
+        segIdTracker.add(segId+msg_length)
+            
+        
         
         print('received %d bytes of data from %s' % (len(data), str(client_addr)))
         
         if verbose:
             #print("Data: {}".format(data))
             #print("Addresses: {}".format(client_addr))
-            print("%d:%d" % (nextSegId, msg_length))
+            print("%d:%d" % (segId, msg_length))
         
-        segId = talkedTo.get(client_ip, -1)
+        talkedTo[client_ip] = int(segId) + int(msg_length)
         
-        if int(nextSegId) != segId and int(nextSegId) != 0:
-            print('error: not in order. waiting for id=%s\n' % (segId))
-            continue
-        
-        talkedTo[client_ip] = int(nextSegId) + int(msg_length)
-        
+        f_endTransaction = flags & 2**1
         p_counter += 1
-        if p_counter > 10 or flags & 2**1:
-            sock.sendto(b'yep', client_addr)
-            print('received')
+        if p_counter > 10 or f_endTransaction:
+            unreceivedIds = [i for i in segIdTracker if i != segId+msg_length]
+            f_nack = 1 if unreceivedIds else 0
+            f_newTransaction = 0
+            f_endTransaction = 0
+            f_ack = 0
+            if f_nack:
+                f_fin = 0
+                flags = f_newTransaction + (f_endTransaction << 1) + (f_ack << 2) + (f_fin << 3) + (f_nack << 4)
+                sock.sendto(b'nope', client_addr)
+            else:
+                f_fin = 1
+                flags = f_newTransaction + (f_endTransaction << 1) + (f_ack << 2) + (f_fin << 3) + (f_nack << 4)
+                sock.sendto(b'yep', client_addr)
+            print('received %d bytes total' % (len(s)))
             p_counter = 0
-            if savefile and s and flags & 2**1:
-                with open(output_file, 'wb') as of:
-                    of.write(s)
-                s = bytearray()
+        if f_endTransaction and savefile:
+            with open(output_file, 'wb') as of:
+                of.write(s)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

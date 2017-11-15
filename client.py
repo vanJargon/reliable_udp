@@ -64,8 +64,9 @@ def main(rate, continuous, address, filename):
         f_newTransaction = 1 if segId == 0 else 0
         f_endTransaction = 1 if segId+65498 >= len(message) else 0
         f_ack = 0
+        f_fin = 0
         f_nack = 0
-        flags = f_newTransaction + (f_endTransaction << 1) + (f_ack << 2) + (f_nack << 3)
+        flags = f_newTransaction + (f_endTransaction << 1) + (f_ack << 2) + (f_fin << 3) + (f_nack << 4)
         #print(flags)
         #print('msg length %d' % msg_length)
         payload = pack('!BII' + str(msg_length) + 's', flags, tr_id, segId, msg) # struct pack is used to make sure that segId is always 4 bytes large, since integers in python are always 4 bytes
