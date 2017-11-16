@@ -30,3 +30,30 @@ Flow Control
 Files: FlowControlClientTest.py, FlowControlServerTest.py
 
 Testing congestion adjustment by varying size of files in accordance to data loss. 
+
+Reliable UDP at fixed send rate
+------------
+To test reliability of sending files using our protocol over IP/UDP. 
+Written in python3, but also compatible with python2.7
+
+Files: server.py, client.py
+Aux files: ignite.mp4, largefile.txt
+
+For client.py, 
+usage: client.py [-h] [-r RATE] [-a ADDRESS] [-f FILENAME]
+
+optional arguments:
+  -h, --help   show this help message and exit
+  -r RATE      Packet rate in Mbps (eg; -r 1.5 is 1.5 Mbps)
+  -a ADDRESS   Indicate the ip address to send the data to
+  -f FILENAME  Indicate the name of file to send
+
+For server.py, 
+usage: server.py [-h] [-v] [-s] [-o OUTPUT_FILENAME]
+
+optional arguments:
+  -h, --help          show this help message and exit
+  -v, --verbose       Prints data and addresses
+  -s, --savefile      Indicate whether to save data to file
+  -o OUTPUT_FILENAME  Indicate name of file to output. Defaults to 'output' in
+                      the same directory

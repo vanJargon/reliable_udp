@@ -1,18 +1,18 @@
 #!/usr/bin/python3
 
 """
-Networks Lab 3: UDP Socket Programming
-Name: Jonathan Wee (1001458)
-Name: Vanessa Tan (1001827)
-
 Server code.
 
 Socket binds to 0.0.0.0 instead of localhost so it responds to its public IP address
 
-New filestreams must start with segId=0
+As our protocol runs on top of UDP, we have the following structure
+Header layout
+|f_nack(4bits)|f_fin(1bit)|f_ack(1bit)|f_endTransaction(1bit)|f_newTransaction(1bit)|transactionId(4bytes)|segId(4bytes)|data|
+
+New filestreams must start with segId=0, with f_newTransaction=1
 Subsequent segIds simply add the current segId and the number of msg bytes received
-If UDP packets are received in order, no output is given
-Else, server will print error message
+
+The server either acks or nacks every 10 messages received from the same IP,Port,TransactionId
 
 Additional cmd line option --verbose added to make server noisy
 """
@@ -22,7 +22,7 @@ from struct import *
 import argparse
 from sortedcontainers import SortedList
 
-def run_server(verbose, savefile, output_file):
+def run_server(verbose, savefile, output_filename):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)#socket.SOCK_RAW, socket.IPPROTO_IP)#
     server_address = '0.0.0.0'
     server_port = 5555
@@ -50,13 +50,29 @@ def run_server(verbose, savefile, output_file):
         
         # store data into s TODO: make it such that data stored is unique to transaction_id, source_ip and source_port
         s[segId:msg_length] = msg
-        if segId in segIdTracker or segId+msg_length > segIdTracker[0]:
+        
+        if segId == segIdTracker[0]:
             segIdTracker.remove(segId)
-        segIdTracker.add(segId+msg_length)
+            segIdTracker.add(segId+msg_length)
+        else:
+            segIdTracker.add(segId)
+            segIdTracker.add(segId+msg_length)
+        #if segId+msg_length in segIdTracker:
+        #    segIdTracker.remove(segId+msg_length)
+        #    if segId in segIdTracker:
+        #        segIdTracker.remove(segId)
+        #elif segId in segIdTracker:
+        #    segIdTracker.remove(segId)
+        #    segIdTracker.add(segId+msg_length)
+        #elif segId+msg_length > segIdTracker[0]:
+        #    segIdTracker.remove(segIdTracker[0])
+        #    segIdTracker.add(segId+msg_length)
+        #else:
+        #    segIdTracker.add(segId+msg_length)
             
         
         
-        print('received %d bytes of data from %s' % (len(data), str(client_addr)))
+        print('received %d bytes of UDP payload from %s' % (len(data), str(client_addr)))
         
         if verbose:
             #print("Data: {}".format(data))
@@ -76,24 +92,28 @@ def run_server(verbose, savefile, output_file):
             if f_nack:
                 f_fin = 0
                 flags = f_newTransaction + (f_endTransaction << 1) + (f_ack << 2) + (f_fin << 3) + (f_nack << 4)
-                sock.sendto(b'nope', client_addr)
+                pp = '!BI'# + 'I'*len(unreceivedIds)
+                payload = pack(pp, flags, unreceivedIds[0])
+                sock.sendto(payload, client_addr)
             else:
                 f_fin = 1
                 flags = f_newTransaction + (f_endTransaction << 1) + (f_ack << 2) + (f_fin << 3) + (f_nack << 4)
-                sock.sendto(b'yep', client_addr)
-            print('received %d bytes total' % (len(s)))
+                payload = pack('!B', flags)
+                sock.sendto(payload, client_addr)
+            print('sent',payload,'to',client_addr)
+            print('received %d bytes of actual data in total' % (len(s)))
             p_counter = 0
         if f_endTransaction and savefile:
-            with open(output_file, 'wb') as of:
+            with open(output_filename, 'wb') as of:
                 of.write(s)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--verbose', action='store_true', default=False, help='Prints data and addresses')
     parser.add_argument('-s', '--savefile', action='store_true', default=False, help='Indicate whether to save data to file')
-    parser.add_argument('-o', dest='output_file', default='output', help='Indicate name of file to output')
+    parser.add_argument('-o', dest='output_filename', default='output', help="Indicate name of file to output. Defaults to 'output' in the same directory")
     
     args = parser.parse_args()
 
-    run_server(args.verbose, args.savefile, args.output_file)
+    run_server(args.verbose, args.savefile, args.output_filename)
         
