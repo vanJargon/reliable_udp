@@ -16,19 +16,13 @@ from argparse import ArgumentParser
 # Parse arguments
 
 parser = ArgumentParser(description="Congestion Simulation tests")
-parser.add_argument('--bw-host', '-B',
-                    dest="bw_host",
-                    type=float,
-                    action="store",
-                    help="Bandwidth of host links",
-                    required=True)
-
 parser.add_argument('--bw-net', '-b',
                     dest="bw_net",
                     type=float,
                     action="store",
                     help="Bandwidth of network link",
                     required=True)
+
 parser.add_argument('--delay',
                     dest="delay",
                     type=float,
@@ -75,7 +69,6 @@ parser.add_argument('--diff',
 # Expt parameters
 args = parser.parse_args()
 
-
 class StarTopo(Topo):
     "Star topology for Congestion Simulation experiment"
 
@@ -87,23 +80,18 @@ class StarTopo(Topo):
         # Create switch and host nodes
         for i in xrange(n):
             self.addHost( 'h%d' % (i+1), cpu=cpu )
-            
 
         self.addSwitch('s0', fail_mode='open')
 
-        
-        self.addLink('h1', 's0', bw=bw_host, delay=delay,
-                      max_queue_size=int(maxq))
-
-        for i in xrange(1, n):
-            self.addLink('h%d' % (i+1), 's0', bw=bw_net)
+        for i in xrange(0, n):
+            link_loss = (i*(100/n))/2 # h1 (i=0) will have 0% link loss, limit link loss is 50%
+            link = self.addLink('h%d' % (i+1), 's0', bw=bw_net, loss=link_loss)
 
 def main():
     "Create network and run Congestion Simulation experiment"
     print "starting mininet ...."
     # Reset to known state
-    topo = StarTopo(n=args.n, bw_host=args.bw_host,
-                    delay='%sms' % args.delay,
+    topo = StarTopo(n=args.n, delay='%sms' % args.delay,
                     bw_net=args.bw_net, maxq=args.maxq, diff=args.diff)
     net = Mininet(topo=topo, host=CPULimitedHost, link=TCLink,
                   autoPinCpus=True, controller=OVSController)

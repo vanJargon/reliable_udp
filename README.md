@@ -4,8 +4,8 @@ A project to implement a reliable and quick transport protocol (RQTP) in a local
 - Point to point file transfer
 - Broadcasting
 
-Test and Experiment
--------------------
+Testing and Experiment
+----------------------
 Mininet is used to simulate our network with packet loss. 
 
 To start mininet, use
@@ -13,9 +13,9 @@ To start mininet, use
 $ sudo ./run.sh
 ```
 
-Start the server application on h1, and the client(s) on h2-h5. Set up the server to send approximately 1.5 Mbps of traffic to the client(s). No packets loss should be observed.
+The `run.sh` file specifies the default arguments that will be used when initializing mininet. By default, 5 hosts are initialized and the bandwidth of each link is set to 1.5 Mbps. Each link in the network has a different loss (h1 has 0% loss, h2 has 20% loss,..., h5 has 80% loss) to test the reliability of our file transfer protocol.
 
-However, packet loss should be observed when the rate of file transfer is increased (e.g 1.6 Mbps). 
+To test the reliability of the protocol, start the server application on h1 and the client(s) on h2-h5 and proceed with the file transfer. 
 
 Flow Control
 ------------
