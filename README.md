@@ -21,6 +21,12 @@ Flow Control
 ------------
 To test UDP in the case of congestion causing data loss. 
 
-Reliability:
+Reliability 
+Files: reliableClientTest.py, reliableServerTest.py
 
-Flow:
+Testing reliability using lab3 files by adjusting rates of data transfer. 
+
+Flow Control
+Files: FlowControlClientTest.py, FlowControlServerTest.py
+
+Testing congestion adjustment by varying size of files in accordance to data loss. 
