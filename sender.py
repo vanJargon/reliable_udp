@@ -93,19 +93,24 @@ def main(rate, address, filename):
             data, addr = sock.recvfrom(1024)
             flags, recSegId, recMsgLen = unpack('!BII', data)
             f_fin = flags & 2**3
-            indexToChange = window.index((recSegId, recMsgLen))
-            window.pop(indexToChange)
-            window_timer.pop(indexToChange)
-            global nextSegId
-            nextSegId = addToWindow(nextSegId)
+            #print('fin',f_fin)
+            #print('window',window)
+            #print('segId',recSegId)
+            #print('msglen',recMsgLen)
+            if recSegId < len(message):
+                indexToChange = window.index((recSegId, recMsgLen))
+                window.pop(indexToChange)
+                window_timer.pop(indexToChange)
+                global nextSegId
+                nextSegId = addToWindow(nextSegId)
             #print("\nreceived message:", data,"\nflags:", flags, "\nrecSegId:", recSegId, "\nrecMsgLen:", recMsgLen)
-            
+            #print('w2',window)
             if f_fin:
                 return True
         except timeout:
             pass
         return False
-    
+
     while window:
         if listenForAcks():
             break
@@ -123,7 +128,22 @@ def main(rate, address, filename):
         sys.stdout.write("\rTime elapsed: %.3fs" % (time.time()-starttime))
         sys.stdout.flush()
     
-    #segsend(len(message), 0)
+    window_timer.append(time.time() - w_timeout)
+    while True:
+        if listenForAcks():
+            break
+        if (time.time() - nexttime) < timeinterval: continue
+        nexttime += timeinterval
+        
+        if time.time() - window_timer[0] > w_timeout:
+            segsend(len(message), 0)
+            window_timer[i] = time.time()
+
+        #print('flags:',flags,'\npayload:',payload)
+        #print('sent %d bytes' % (sent))
+        sys.stdout.write("\rTime elapsed: %.3fs" % (time.time()-starttime))
+        sys.stdout.flush()
+    
 
 if __name__=="__main__":
 

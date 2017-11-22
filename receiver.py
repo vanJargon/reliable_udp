@@ -41,6 +41,7 @@ def run_server(verbose, savefile, output_filename):
         msg_length = len(data) - 9
         flags, tr_id, segId, msg = unpack('!BII' + str(msg_length) + 's', data)
         
+        fin = flags & 2**3
         f_newTransaction = flags & 2**0
         if f_newTransaction:
             print('new filestream started')
@@ -59,6 +60,7 @@ def run_server(verbose, savefile, output_filename):
             print('flags:', flags)
             print('f_newTransaction:', flags & 2**0)
             print('f_endTransaction:', (flags & 2**1) >> 1)
+            print('f_fin:', (flags & 2**3) >> 3)
         
         talkedTo[client_ip] = int(segId) + int(msg_length)
         
@@ -73,7 +75,7 @@ def run_server(verbose, savefile, output_filename):
         #print('sent',payload,'to',client_addr)
         #print('received %d bytes of actual data in total' % (len(s)))
         
-        if f_endTransaction:
+        if fin:
             print('endTr, file size:', len(s))
             if savefile:
                 with open(output_filename, 'wb') as of:
