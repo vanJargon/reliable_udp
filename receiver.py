@@ -20,7 +20,6 @@ Additional cmd line option --verbose added to make server noisy
 import socket
 from struct import *
 import argparse
-from sortedcontainers import SortedList
 
 def run_server(verbose, savefile, output_filename):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)#socket.SOCK_RAW, socket.IPPROTO_IP)#
