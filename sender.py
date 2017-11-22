@@ -54,7 +54,7 @@ def main(rate, address, filename):
         payload = pack('!BIII' + str(msg_length) + 's', flags, tr_id, segId, len(message), msg) # struct pack is used to make sure that segId is always 4 bytes large, since integers in python are always 4 bytes
         sent = sock.sendto(payload, receiver_address)
         
-        print('segId:',segId,' sent:',sent-9)
+        #print('segId:',segId,' sent:',sent-9)
     
     starttime = time.time()
     
