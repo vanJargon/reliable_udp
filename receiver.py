@@ -28,7 +28,6 @@ def run_server(verbose, savefile, output_filename):
     server_port = 5555
     sock.bind((server_address, server_port))
     
-    def send_ack()
     
     if verbose:
         print("Server started. Listening on %s at port %d" % (server_address, server_port))
@@ -51,7 +50,7 @@ def run_server(verbose, savefile, output_filename):
         s[segId:msg_length] = msg
         
         
-        print('received %d bytes of UDP payload from %s' % (len(data), str(client_addr)))
+        #print('received %d bytes of UDP payload from %s' % (len(data), str(client_addr)))
         
         if verbose:
             #print("Data: {}".format(data))

@@ -47,7 +47,7 @@ def main(rate, address, filename):
         f_newTransaction = 1 if segId == 0 else 0
         f_endTransaction = 1 if segId+data_payload_size >= len(message) else 0
         f_ack = 0
-        f_fin = 0
+        f_fin = 0 if window else 1
         flags = f_newTransaction + (f_endTransaction << 1) + (f_ack << 2) + (f_fin << 3)
         #print(flags)
         #print('msg length %d' % msg_length)
@@ -56,7 +56,7 @@ def main(rate, address, filename):
     
     starttime = time.time()
     
-    mtu = 64
+    mtu = 6400
     packet_size = mtu
     data_payload_size = packet_size - 28 - 9
     
@@ -66,43 +66,64 @@ def main(rate, address, filename):
     
     segId = 0
     tr_id = 353 # should be random
-    window_size = 5
+    max_window_size = 5
     
-    window = [i*mtu for i in range(len(window_size))]
-    window_i = [0] * window_size
-    acked = []
+    window = [] # composite window. Only segIds that have not been ACKed will be in the window
+    global nextSegId
+    nextSegId = 0 # the next segment id to add into the window
+    window_timer = []
+    w_timeout = 0.2
     
-    # the next segment id to add into the window
-    nextSegId = mtu * window_size
-    while window:
+    # add stuff into the window
+    def addToWindow(nextSegId):
+        while len(window) < max_window_size and nextSegId < len(message):
+            if nextSegId + data_payload_size >= len(message):
+                data_size = len(message)-nextSegId
+            else:
+                data_size = data_payload_size
+            window.append((nextSegId, data_size))
+            nextSegId += data_size
+            window_timer.append(time.time() - w_timeout)
+        return nextSegId
+    
+    nextSegId = addToWindow(nextSegId)
+    
+    def listenForAcks():
         try:
             data, addr = sock.recvfrom(1024)
             flags, recSegId, recMsgLen = unpack('!BII', data)
             f_fin = flags & 2**3
-            
-            
-            indexToChange = window.indexOf(recSegId)
-            window[indexToChange] = nextSegId
-            window_i[indexToChange] = 0
-            nextSegId += data_payload_size
+            indexToChange = window.index((recSegId, recMsgLen))
+            window.pop(indexToChange)
+            window_timer.pop(indexToChange)
+            global nextSegId
+            nextSegId = addToWindow(nextSegId)
+            #print("\nreceived message:", data,"\nflags:", flags, "\nrecSegId:", recSegId, "\nrecMsgLen:", recMsgLen)
             
             if f_fin:
-                break
-            #print("\nreceived message:", data,"\nflags:", flags, "\nrecSegId:", recSegId, "\nrecMsgLen:", recMsgLen)
-        except:
+                return True
+        except timeout:
             pass
+        return False
+    
+    while window:
+        if listenForAcks():
+            break
         if (time.time() - nexttime) < timeinterval: continue
         nexttime += timeinterval
         
-        for i in range(len(window_i)):
-            if window_i[i] == 0:
-                segsend(window[i], data_payload_size)
+        for i in range(len(window)):
+            if time.time() - window_timer[i] > w_timeout:
+                segId, data_payload_size = window[i]
+                segsend(segId, data_payload_size)
+                window_timer[i] = time.time()
 
         #print('flags:',flags,'\npayload:',payload)
         #print('sent %d bytes' % (sent))
         sys.stdout.write("\rTime elapsed: %.3fs" % (time.time()-starttime))
         sys.stdout.flush()
-        
+    
+    #segsend(len(message), 0)
 
 if __name__=="__main__":
 
