@@ -85,14 +85,13 @@ class StarTopo(Topo):
         self.addSwitch('s0', fail_mode='open')
 
         for i in xrange(0, n):
-            link_loss = i*(50/n) # h1 (i=0) will have 0% link loss, limit link loss is 50%
-            self.addLink('h%d' % (i+1), 's0', bw=bw_net, loss=link_loss)
+            self.addLink('h%d' % (i+1), 's0', bw=bw_net)
 
 def configureNetwork(net, n, switchNode='s0'):
     switch = net.getNodeByName(switchNode)
     
     for i in xrange(0, n):
-        linkLoss = i*(50/n) # h1 (i=0) will have 0% link loss, limit link loss is 50%
+        linkLoss = max(i-1,0)*(50/n) # h1 and h2 (i=0) will have 0% link loss, limit link loss is 50%
         cmd = 'tc qdisc change dev %s-eth%d parent 5:1 netem delay 10ms reorder 25%% 50%% loss %d%%' % (switchNode, (i+1), linkLoss) # 25% of packets (with a correlation of 50%) will get send immediately, others will be delayed by 10ms
         switch.cmd(cmd)
 
