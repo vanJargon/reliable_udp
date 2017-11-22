@@ -28,12 +28,12 @@ def run_server(verbose, savefile, output_filename):
     server_port = 5555
     sock.bind((server_address, server_port))
     
+    def send_ack()
+    
     if verbose:
         print("Server started. Listening on %s at port %d" % (server_address, server_port))
     talkedTo = {}
     s = bytearray()
-    segIdTracker = SortedList([0])
-    p_counter = 0
     
     while True:
         recv = sock.recvfrom(65535)
@@ -46,30 +46,9 @@ def run_server(verbose, savefile, output_filename):
         if f_newTransaction:
             print('new filestream started')
             s = bytearray()
-            segIdTracker = SortedList([0])
         
         # store data into s TODO: make it such that data stored is unique to transaction_id, source_ip and source_port
         s[segId:msg_length] = msg
-        
-        if segId == segIdTracker[0]:
-            segIdTracker.remove(segId)
-            segIdTracker.add(segId+msg_length)
-        else:
-            segIdTracker.add(segId)
-            segIdTracker.add(segId+msg_length)
-        #if segId+msg_length in segIdTracker:
-        #    segIdTracker.remove(segId+msg_length)
-        #    if segId in segIdTracker:
-        #        segIdTracker.remove(segId)
-        #elif segId in segIdTracker:
-        #    segIdTracker.remove(segId)
-        #    segIdTracker.add(segId+msg_length)
-        #elif segId+msg_length > segIdTracker[0]:
-        #    segIdTracker.remove(segIdTracker[0])
-        #    segIdTracker.add(segId+msg_length)
-        #else:
-        #    segIdTracker.add(segId+msg_length)
-            
         
         
         print('received %d bytes of UDP payload from %s' % (len(data), str(client_addr)))
@@ -77,35 +56,29 @@ def run_server(verbose, savefile, output_filename):
         if verbose:
             #print("Data: {}".format(data))
             #print("Addresses: {}".format(client_addr))
-            print("%d:%d" % (segId, msg_length))
+            print("segId:%d,msg_length:%d" % (segId, msg_length))
+            print('flags:', flags)
+            print('f_newTransaction:', flags & 2**0)
+            print('f_endTransaction:', (flags & 2**1) >> 1)
         
         talkedTo[client_ip] = int(segId) + int(msg_length)
         
-        f_endTransaction = flags & 2**1
-        p_counter += 1
-        if p_counter > 10 or f_endTransaction:
-            unreceivedIds = [i for i in segIdTracker if i != segId+msg_length]
-            f_nack = 1 if unreceivedIds else 0
-            f_newTransaction = 0
-            f_endTransaction = 0
-            f_ack = 0
-            if f_nack:
-                f_fin = 0
-                flags = f_newTransaction + (f_endTransaction << 1) + (f_ack << 2) + (f_fin << 3) + (f_nack << 4)
-                pp = '!BI'# + 'I'*len(unreceivedIds)
-                payload = pack(pp, flags, unreceivedIds[0])
-                sock.sendto(payload, client_addr)
-            else:
-                f_fin = 1
-                flags = f_newTransaction + (f_endTransaction << 1) + (f_ack << 2) + (f_fin << 3) + (f_nack << 4)
-                payload = pack('!B', flags)
-                sock.sendto(payload, client_addr)
-            print('sent',payload,'to',client_addr)
-            print('received %d bytes of actual data in total' % (len(s)))
-            p_counter = 0
-        if f_endTransaction and savefile:
-            with open(output_filename, 'wb') as of:
-                of.write(s)
+        f_endTransaction = (flags & 2**1) >> 1
+        f_newTransaction = 0
+        f_ack = 0
+        f_fin = 1 if f_endTransaction else 0
+        flags = f_newTransaction + (f_endTransaction << 1) + (f_ack << 2) + (f_fin << 3)
+
+        payload = pack('!BII', flags, segId, msg_length)
+        sock.sendto(payload, client_addr)
+        #print('sent',payload,'to',client_addr)
+        #print('received %d bytes of actual data in total' % (len(s)))
+        
+        if f_endTransaction:
+            print('endTr, file size:', len(s))
+            if savefile:
+                with open(output_filename, 'wb') as of:
+                    of.write(s)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

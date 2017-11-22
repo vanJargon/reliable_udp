@@ -31,17 +31,33 @@ import time
 import sys
 
 def main(rate, address, filename):
-    sock = socket(AF_INET, SOCK_DGRAM)
-    server_address = (address, 5555)
     if filename:
         with open(filename, 'rb') as input_file:
             message = input_file.read()
     else:
         message = 'hi how are you'.encode('UTF-8')
     
+    sock = socket(AF_INET, SOCK_DGRAM)
+    sock.settimeout(0.1)
+    receiver_address = (address, 5555)
+    
+    def segsend(segId, data_payload_size):
+        msg = message[segId:segId+data_payload_size] # spliced file contents
+        msg_length = len(msg)
+        f_newTransaction = 1 if segId == 0 else 0
+        f_endTransaction = 1 if segId+data_payload_size >= len(message) else 0
+        f_ack = 0
+        f_fin = 0
+        flags = f_newTransaction + (f_endTransaction << 1) + (f_ack << 2) + (f_fin << 3)
+        #print(flags)
+        #print('msg length %d' % msg_length)
+        payload = pack('!BII' + str(msg_length) + 's', flags, tr_id, segId, msg) # struct pack is used to make sure that segId is always 4 bytes large, since integers in python are always 4 bytes
+        sent = sock.sendto(payload, receiver_address)
+    
     starttime = time.time()
     
-    packet_size = 65535
+    mtu = 64
+    packet_size = mtu
     data_payload_size = packet_size - 28 - 9
     
     timeinterval = packet_size/(rate*125000.0)
@@ -50,43 +66,44 @@ def main(rate, address, filename):
     
     segId = 0
     tr_id = 353 # should be random
-    p_counter = 0
-    while segId < len(message):
+    window_size = 5
+    
+    window = [i*mtu for i in range(len(window_size))]
+    window_i = [0] * window_size
+    acked = []
+    
+    # the next segment id to add into the window
+    nextSegId = mtu * window_size
+    while window:
+        try:
+            data, addr = sock.recvfrom(1024)
+            flags, recSegId, recMsgLen = unpack('!BII', data)
+            f_fin = flags & 2**3
+            
+            
+            indexToChange = window.indexOf(recSegId)
+            window[indexToChange] = nextSegId
+            window_i[indexToChange] = 0
+            nextSegId += data_payload_size
+            
+            if f_fin:
+                break
+            #print("\nreceived message:", data,"\nflags:", flags, "\nrecSegId:", recSegId, "\nrecMsgLen:", recMsgLen)
+        except:
+            pass
         if (time.time() - nexttime) < timeinterval: continue
         nexttime += timeinterval
         
-        msg = message[segId:segId+data_payload_size] # spliced file contents
-        msg_length = len(msg)
-        f_newTransaction = 1 if segId == 0 else 0
-        f_endTransaction = 1 if segId+data_payload_size >= len(message) else 0
-        f_ack = 0
-        f_fin = 0
-        f_nack = 0
-        flags = f_newTransaction + (f_endTransaction << 1) + (f_ack << 2) + (f_fin << 3) + (f_nack << 4)
-        #print(flags)
-        #print('msg length %d' % msg_length)
-        payload = pack('!BII' + str(msg_length) + 's', flags, tr_id, segId, msg) # struct pack is used to make sure that segId is always 4 bytes large, since integers in python are always 4 bytes
-        sent = sock.sendto(payload, server_address)
+        for i in range(len(window_i)):
+            if window_i[i] == 0:
+                segsend(window[i], data_payload_size)
 
+        #print('flags:',flags,'\npayload:',payload)
         #print('sent %d bytes' % (sent))
-        segId += msg_length
         sys.stdout.write("\rTime elapsed: %.3fs" % (time.time()-starttime))
         sys.stdout.flush()
         
-        p_counter += 1
-        if p_counter > 10:
-            p_counter = 0
-            data, addr = sock.recvfrom(1024)
-            #print('\ndata:',data)
-            if len(data) > 1:
-                flags, msg = unpack('!BI', data)
-                segId = msg
-                #print('Resending seq', segId)
-    
-    if p_counter:
-        data, addr = sock.recvfrom(1024) 
-        print("\nreceived message:", data)
-    
+
 if __name__=="__main__":
 
     parser = argparse.ArgumentParser()
