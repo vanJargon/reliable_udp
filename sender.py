@@ -51,14 +51,16 @@ def main(rate, address, filename):
         flags = f_newTransaction + (f_endTransaction << 1) + (f_ack << 2) + (f_fin << 3)
         #print(flags)
         #print('msg length %d' % msg_length)
-        payload = pack('!BII' + str(msg_length) + 's', flags, tr_id, segId, msg) # struct pack is used to make sure that segId is always 4 bytes large, since integers in python are always 4 bytes
+        payload = pack('!BIII' + str(msg_length) + 's', flags, tr_id, segId, len(message), msg) # struct pack is used to make sure that segId is always 4 bytes large, since integers in python are always 4 bytes
         sent = sock.sendto(payload, receiver_address)
+        
+        print('segId:',segId,' sent:',sent-9)
     
     starttime = time.time()
     
     mtu = 6400
     packet_size = mtu
-    data_payload_size = packet_size - 28 - 9
+    data_payload_size = packet_size - 28 - 13
     
     timeinterval = packet_size/(rate*125000.0)
     
@@ -137,7 +139,7 @@ def main(rate, address, filename):
         
         if time.time() - window_timer[0] > w_timeout:
             segsend(len(message), 0)
-            window_timer[i] = time.time()
+            window_timer[0] = time.time()
 
         #print('flags:',flags,'\npayload:',payload)
         #print('sent %d bytes' % (sent))

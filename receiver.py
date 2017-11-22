@@ -38,17 +38,18 @@ def run_server(verbose, savefile, output_filename):
         recv = sock.recvfrom(65535)
         data, client_addr = recv
         client_ip = client_addr[0]
-        msg_length = len(data) - 9
-        flags, tr_id, segId, msg = unpack('!BII' + str(msg_length) + 's', data)
+        msg_length = len(data) - 13
+        flags, tr_id, segId, total_len, msg = unpack('!BIII' + str(msg_length) + 's', data)
         
         fin = flags & 2**3
         f_newTransaction = flags & 2**0
         if f_newTransaction:
             print('new filestream started')
-            s = bytearray()
+            s = bytearray(total_len)
         
         # store data into s TODO: make it such that data stored is unique to transaction_id, source_ip and source_port
-        s[segId:msg_length] = msg
+        if msg_length:
+            s[segId:segId+msg_length] = msg
         
         
         #print('received %d bytes of UDP payload from %s' % (len(data), str(client_addr)))
@@ -67,7 +68,7 @@ def run_server(verbose, savefile, output_filename):
         f_endTransaction = (flags & 2**1) >> 1
         f_newTransaction = 0
         f_ack = 0
-        f_fin = 1 if f_endTransaction else 0
+        f_fin = 1 if fin else 0
         flags = f_newTransaction + (f_endTransaction << 1) + (f_ack << 2) + (f_fin << 3)
 
         payload = pack('!BII', flags, segId, msg_length)
