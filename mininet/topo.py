@@ -11,6 +11,7 @@ from mininet.util import dumpNodeConnections
 from mininet.cli import CLI
 from mininet.node import OVSController
 
+from subprocess import Popen
 from argparse import ArgumentParser
 
 # Parse arguments
@@ -84,8 +85,16 @@ class StarTopo(Topo):
         self.addSwitch('s0', fail_mode='open')
 
         for i in xrange(0, n):
-            link_loss = (i*(100/n))/2 # h1 (i=0) will have 0% link loss, limit link loss is 50%
-            link = self.addLink('h%d' % (i+1), 's0', bw=bw_net, loss=link_loss)
+            link_loss = i*(50/n) # h1 (i=0) will have 0% link loss, limit link loss is 50%
+            self.addLink('h%d' % (i+1), 's0', bw=bw_net, loss=link_loss)
+
+def configureNetwork(net, n, switchNode='s0'):
+    switch = net.getNodeByName(switchNode)
+    
+    for i in xrange(0, n):
+        linkLoss = i*(50/n) # h1 (i=0) will have 0% link loss, limit link loss is 50%
+        cmd = 'tc qdisc change dev %s-eth%d parent 5:1 netem delay 10ms reorder 25%% 50%% loss %d%%' % (switchNode, (i+1), linkLoss) # 25% of packets (with a correlation of 50%) will get send immediately, others will be delayed by 10ms
+        switch.cmd(cmd)
 
 def main():
     "Create network and run Congestion Simulation experiment"
@@ -95,11 +104,14 @@ def main():
                     bw_net=args.bw_net, maxq=args.maxq, diff=args.diff)
     net = Mininet(topo=topo, host=CPULimitedHost, link=TCLink,
                   autoPinCpus=True, controller=OVSController)
-    net.start()
-    print "net started"    
+    net.start() #starts lossy network
+    print "net started"
+    configureNetwork(net, args.n)
+    print "packet reordering and loss enabled"
     dumpNodeConnections(net.hosts)
-    net.pingAll()
+    #net.pingAll()
     CLI(net)
+    Popen('killall -9 cat', shell=True).wait()
 
 if __name__ == '__main__':
     main()
