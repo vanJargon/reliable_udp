@@ -1,4 +1,4 @@
-#socket_echo_client.py
+#!/usr/bin/python3
 import socket
 import sys
 import time
