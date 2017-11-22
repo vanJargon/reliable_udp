@@ -4,7 +4,7 @@ import sys
 import time
 import argparse
 
-def main(rate, address, filename):
+def main(address, filename):
     if filename:
         with open(filename, 'rb') as input_file:
             message = input_file.read()
@@ -48,8 +48,6 @@ def main(rate, address, filename):
 if __name__=="__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-r', type=float, dest='rate', default=3.0, 
-        help='Packet rate in Mbps (eg; -r 1.5 is 1.5 Mbps)')
     
     parser.add_argument('-a', type=str, dest='address', default='localhost', 
         help='Indicate the ip address to send the data to')
@@ -59,5 +57,5 @@ if __name__=="__main__":
     
     args = parser.parse_args()
     
-    print("Data rate is %.1f Mbps\nSending to %s" % (args.rate, args.address))
-    main(args.rate, args.address, args.filename)
+    print("Sending to %s" % (args.address))
+    main(args.address, args.filename)
