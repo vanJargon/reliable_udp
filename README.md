@@ -2,32 +2,47 @@ Networks Project
 ================
 A project to implement a reliable and quick transport protocol (RQTP) in a local network, used for Point to point file transfer.
 
-Reliable UDP at fixed send rate
+RQTP - Reliable and Quick file Transfer Protocol
 ------------
-To test reliability of sending files using our protocol over IP/UDP. 
+For reliable of sending files using our protocol over IP/UDP. 
 Written in python3, but also compatible with python2.7
 
 Files: `server.py`, `client.py`
 Aux files: `ignite.mp4`, `largefile.txt`
 
-For `client.py`, 
-usage: `client.py [-h] [-r RATE] [-a ADDRESS] [-f FILENAME]`
+For `sender.py`, 
+usage: sender.py [-h] [-r RATE] [-a ADDRESS] [-f FILENAME] [-p PORTNUM]
 
 optional arguments:
-  `-h`, `--help`   show this help message and exit
-  `-r RATE`        Packet rate in Mbps (eg; -r 1.5 is 1.5 Mbps)
-  `-a ADDRESS`     Indicate the ip address to send the data to
-  `-f FILENAME`    Indicate the name of file to send
+  -h, --help   show this help message and exit
+  -r RATE      Specify starting packet rate in Mbps (eg; -r 1.5 is 1.5 Mbps)
+  -a ADDRESS   Indicate the ip address to send the data to. Default is
+               localhost.
+  -f FILENAME  Indicate the name of file to send
+  -p PORTNUM   Indicate destination port. Default is 5555.
 
-For `server.py`, 
-usage: `server.py [-h] [-v] [-s] [-o OUTPUT_FILENAME]`
+For `receiver.py`, 
+usage: receiver.py [-h] [-v] [-s] [-o OUTPUT_FILENAME]
 
 optional arguments:
-  `-h`, `--help`          show this help message and exit
-  `-v`, `--verbose`       Prints data and addresses
-  `-s`, `--savefile`      Indicate whether to save data to file
-  `-o OUTPUT_FILENAME`    Indicate name of file to output. Defaults to 'output' in
-                          the same directory
+  -h, --help          show this help message and exit
+  -v, --verbose       Prints data and addresses
+  -s, --savefile      Indicate whether to save data to file
+  -o OUTPUT_FILENAME  Indicate name of file to output. Defaults to 'output' in
+                      the same directory
+
+Reliability
+------------
+Reliability is ensured using our own customization of the Selective Repeat strategy, using what we call a composite window instead. 
+
+The twist is that instead of having a sliding window that waits for the first packet in the window to be ACKed before it can slide, our composite window simply removes ACKed packet and adds new packets to the window as long as the window is not full and the end of message has not been reached. 
+
+This composite window was implemented using a simple python array, accompanied by an equal sized array to act as a timer. 
+
+A while loop is used for busy waiting, both responding to ACKs when they arrive as well as resending packets when their timers expire. 
+
+Finally, when all acknowledgements have been received, a single packet with the f_fin bit flag set indicates that the file has been sent successfully. 
+
 
 Flow Control
 ------------
