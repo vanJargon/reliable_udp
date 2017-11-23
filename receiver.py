@@ -3,27 +3,20 @@
 """
 Socket binds to 0.0.0.0 instead of localhost so it responds to its public IP address
 
-As our protocol runs on top of UDP, we have the following structure
-Header layout
-|f_nack(4bits)|f_fin(1bit)|f_ack(1bit)|f_endTransaction(1bit)|f_newTransaction(1bit)|transactionId(4bytes)|segId(4bytes)|data|
-
 New filestreams must start with segId=0, with f_newTransaction=1
 Subsequent segIds simply add the current segId and the number of msg bytes received
 
-The server either acks or nacks every 10 messages received from the same IP,Port,TransactionId
+The server acks every packet received
 
 Additional cmd line option --verbose added to make server noisy
+Options -s to save file, -o to indicate output file name
 """
 
 import socket
 from struct import *
 import argparse
 
-class Receiver:
-    def __init__():
-        pass
-
-def run_server(verbose, savefile, output_filename):
+def runReceiver(verbose, savefile, output_filename):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_address = '0.0.0.0'
     server_port = 5555
@@ -58,12 +51,14 @@ def run_server(verbose, savefile, output_filename):
             print('f_endTransaction:', (flags & 2**1) >> 1)
             print('f_fin:', (flags & 2**3) >> 3)
         
+        # create flags
         f_endTransaction = (flags & 2**1) >> 1
         f_newTransaction = 0
-        f_ack = 0
+        f_ack = 1
         f_fin = 1 if fin else 0
         flags = f_newTransaction + (f_endTransaction << 1) + (f_ack << 2) + (f_fin << 3)
 
+        # send ack
         payload = pack('!BII', flags, segId, msg_length)
         sock.sendto(payload, client_addr)
         
@@ -81,5 +76,5 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    run_server(args.verbose, args.savefile, args.output_filename)
+    runReceiver(args.verbose, args.savefile, args.output_filename)
         
