@@ -1,8 +1,6 @@
 #!/usr/bin/python3
 
 """
-Server code.
-
 Socket binds to 0.0.0.0 instead of localhost so it responds to its public IP address
 
 As our protocol runs on top of UDP, we have the following structure
@@ -21,8 +19,12 @@ import socket
 from struct import *
 import argparse
 
+class Receiver:
+    def __init__():
+        pass
+
 def run_server(verbose, savefile, output_filename):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)#socket.SOCK_RAW, socket.IPPROTO_IP)#
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_address = '0.0.0.0'
     server_port = 5555
     sock.bind((server_address, server_port))
@@ -30,7 +32,6 @@ def run_server(verbose, savefile, output_filename):
     
     if verbose:
         print("Server started. Listening on %s at port %d" % (server_address, server_port))
-    talkedTo = {}
     s = bytearray()
     
     while True:
@@ -46,23 +47,16 @@ def run_server(verbose, savefile, output_filename):
             print('new filestream started')
             s = bytearray(total_len)
         
-        # store data into s TODO: make it such that data stored is unique to transaction_id, source_ip and source_port
+        # store data into s
         if msg_length:
             s[segId:segId+msg_length] = msg
         
-        
-        #print('received %d bytes of UDP payload from %s' % (len(data), str(client_addr)))
-        
         if verbose:
-            #print("Data: {}".format(data))
-            #print("Addresses: {}".format(client_addr))
             print("segId:%d,msg_length:%d" % (segId, msg_length))
             print('flags:', flags)
             print('f_newTransaction:', flags & 2**0)
             print('f_endTransaction:', (flags & 2**1) >> 1)
             print('f_fin:', (flags & 2**3) >> 3)
-        
-        talkedTo[client_ip] = int(segId) + int(msg_length)
         
         f_endTransaction = (flags & 2**1) >> 1
         f_newTransaction = 0
@@ -72,8 +66,6 @@ def run_server(verbose, savefile, output_filename):
 
         payload = pack('!BII', flags, segId, msg_length)
         sock.sendto(payload, client_addr)
-        #print('sent',payload,'to',client_addr)
-        #print('received %d bytes of actual data in total' % (len(s)))
         
         if fin:
             print('endTr, file size:', len(s))
