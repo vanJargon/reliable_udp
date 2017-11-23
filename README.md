@@ -29,7 +29,19 @@ Testing reliability using lab3 files by adjusting rates of data transfer.
 Flow Control
 Files: FlowControlClientTest.py, FlowControlServerTest.py
 
-Testing congestion adjustment by varying size of files in accordance to data loss. 
+Testing congestion adjustment by varying size of files in accordance to data loss.
+
+Variables involved: 
+
+mtu(Integer): the value of a single unit of measurement for packet size.
+
+factor(Integer): the value that determines how large the packet size is. 
+
+packet_size(Integer): the size of packets to be sent = factor * mtu.
+
+safeConnect(Integer): the value that tracks the amount of successful transcation in data transmission. Consecutive successes increases factor, therby increasing packet_size.
+
+dataLoss(Integer): Integer number that tracks the amount of timeout from data loss. Consecutive timeouts decreases factor, thereby reducing packet_size. 
 
 Reliable UDP at fixed send rate
 ------------
