@@ -19,9 +19,7 @@ optional arguments:
   
   `-r` RATE      Specify starting packet rate in Mbps (eg; -r 1.5 is 1.5 Mbps)
   
-  `-a` ADDRESS   Indicate the ip address to send the data to. Default is
-  
-               localhost.
+  `-a` ADDRESS   Indicate the ip address to send the data to. Default is localhost.
                
   `-f` FILENAME  Indicate the name of file to send
   
@@ -38,9 +36,7 @@ optional arguments:
   
   `-s`, `--savefile`      Indicate whether to save data to file
   
-  `-o` OUTPUT_FILENAME  Indicate name of file to output. Defaults to 'output' in
-  
-                      the same directory
+  `-o` OUTPUT_FILENAME  Indicate name of file to output. Defaults to 'output' in the same directory
 
 Simply run `receiver.py` on the host you wish to receive the file and `sender.py` on the host that is sending the file. 
 
