@@ -83,7 +83,8 @@ class StarTopo(Topo):
             self.addHost( 'h%d' % (i+1), cpu=cpu )
 
         self.addSwitch('s0', fail_mode='open')
-
+        
+        # Add links between the switch and host nodes at the specified bandwidth and loss
         for i in xrange(0, n):
             link_loss = i*(10/n)
             self.addLink('h%d' % (i+1), 's0', bw=bw_net, loss=link_loss)
@@ -105,12 +106,12 @@ def main():
     net = Mininet(topo=topo, host=CPULimitedHost, link=TCLink,
                   autoPinCpus=True, controller=OVSController)
     net.start() #starts lossy network
-    print "net started"
+    print "lossy net started"
     configureNetwork(net, args.n)
-    print "packet reordering and loss enabled"
+    print "packet reordering enabled"
     dumpNodeConnections(net.hosts)
-    #net.pingAll()
     CLI(net)
+    net.stop()
 
 if __name__ == '__main__':
     main()
