@@ -16,20 +16,22 @@ Max data size = 65535 - 20 - 8 - 1 - 4 - 4 = 65498
 Sending packets of size BB Bytes, we have to send a packet every (BB Bytes)/(1.0*125000Bps) seconds
 Or, time interval between packets = (BB Bytes)/(rate*125000Bps)
 
-Use -r to select rate
+Use -r to select starting rate, default is 3.0Mbps
 Use -a to select address to send data to, default is localhost
-Use -f to select file to send, default is a short self.message
+Use -p to select destination port number, default is 5555
+Use -f to select file to send, default is a short message
 
 On mininet, to send data to another host, please use -a <other host IP>, e.g. python ./client.py -a 10.0.0.2
 """
 
 from socket import *
+from struct import *
 import argparse
 import time
 import sys
 
 class Sender:
-    message = 'hi how are you'.encode('UTF-8') # default self.message
+    message = 'hi how are you'.encode('UTF-8') # default message
     
     def __init__(self, rate, address, filename, portnum):
         self.updateFile(filename)
@@ -40,6 +42,7 @@ class Sender:
         self.packet_size = self.mtu
         self.data_payload_size = self.packet_size - 28 - 13
         self.timeinterval = self.packet_size/(rate*125000.0)
+        
         self.total_message_length = len(self.message)
         self.tr_id = 353 # eventually unused
         self.max_window_size = 5
@@ -47,6 +50,10 @@ class Sender:
         self.nextSegId = 0 # the next segment id to add into the window
         self.window_timer = []
         self.w_timeout = 0.2
+        
+        self.factor = 1
+        self.safeConnect = 5
+        self.dataLoss = 0
     
     def reset(self):
         self.mtu = 6400
@@ -60,6 +67,9 @@ class Sender:
         self.nextSegId = 0 # the next segment id to add into the window
         self.window_timer = []
         self.w_timeout = 0.2
+        self.factor = 1
+        self.safeConnect = 5
+        self.dataLoss = 0
     
     def sendPacket(self, segId, d_size):
         # splice self.message to send
@@ -90,8 +100,16 @@ class Sender:
             self.window_timer.append(time.time() - self.w_timeout)
     
     def listenForAcks(self):
+        if self.safeConnect > 5:
+            self.safeConnect = 0
+            self.factor += 1
+            self.packet_size = min(self.mtu * self.factor, 65535)
+            self.data_payload_size = self.packet_size - 28 - 13
+
         try:
             data, addr = self.sock.recvfrom(1024)
+            
+            self.safeConnect += 1
             flags, recSegId, recMsgLen = unpack('!BII', data)
             f_fin = flags & 2**3
             if recSegId < len(self.message):
@@ -122,6 +140,14 @@ class Sender:
             
             for i in range(len(self.window)):
                 if time.time() - self.window_timer[i] > self.w_timeout:
+                    self.dataLoss += 1
+                    if self.dataLoss > 3:
+                        self.safeConnect = 0
+                        self.factor = 1 if self.factor <= 1 else self.factor-1
+                        self.dataLoss = 0
+                        self.packet_size = min(self.mtu * self.factor, 65535)
+                        self.data_payload_size = self.packet_size - 28 - 13
+
                     segId, d_size = self.window[i]
                     self.sendPacket(segId, d_size)
                     self.window_timer[i] = time.time()
