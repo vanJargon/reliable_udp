@@ -14,21 +14,32 @@ For `sender.py`,
 usage: sender.py [-h] [-r RATE] [-a ADDRESS] [-f FILENAME] [-p PORTNUM]
 
 optional arguments:
-`  -h, --help   show this help message and exit
-`  -r RATE      Specify starting packet rate in Mbps (eg; -r 1.5 is 1.5 Mbps)
-`  -a ADDRESS   Indicate the ip address to send the data to. Default is
-`               localhost.
-`  -f FILENAME  Indicate the name of file to send
-`  -p PORTNUM   Indicate destination port. Default is 5555.
+
+  `-h`, `--help`   show this help message and exit
+  
+  `-r` RATE      Specify starting packet rate in Mbps (eg; -r 1.5 is 1.5 Mbps)
+  
+  `-a` ADDRESS   Indicate the ip address to send the data to. Default is
+  
+               localhost.
+               
+  `-f` FILENAME  Indicate the name of file to send
+  
+  `-p` PORTNUM   Indicate destination port. Default is 5555.
 
 For `receiver.py`, 
 usage: receiver.py [-h] [-v] [-s] [-o OUTPUT_FILENAME]
 
 optional arguments:
-`  -h, --help          show this help message and exit
-`  -v, --verbose       Prints data and addresses
-`  -s, --savefile      Indicate whether to save data to file
-`  -o OUTPUT_FILENAME  Indicate name of file to output. Defaults to 'output' in
+
+  `-h`, `--help`          show this help message and exit
+  
+  `-v`, `--verbose`       Prints data and addresses
+  
+  `-s`, `--savefile`      Indicate whether to save data to file
+  
+  `-o` OUTPUT_FILENAME  Indicate name of file to output. Defaults to 'output' in
+  
                       the same directory
 
 Simply run `receiver.py` on the host you wish to receive the file and `sender.py` on the host that is sending the file. 
